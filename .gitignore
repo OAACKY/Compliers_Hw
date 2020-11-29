@@ -8,3 +8,4 @@ test/*.res
 !main.cpp
 !common.h
 !tree.h
+!tree.cpp

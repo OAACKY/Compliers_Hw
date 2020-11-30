@@ -1,7 +1,6 @@
 #ifndef TREE_H
 #define TREE_H
-#include<iostream>
-#include<string>
+#include "type.h"
 
 using std::cerr;
 using std::cout;
@@ -52,6 +51,7 @@ enum VarType{
 };
 
 struct TreeNode {
+public:
     int nodeID;
     NodeType nodeType;
 
@@ -72,12 +72,20 @@ struct TreeNode {
     void printNodeConnection();
     string nodeTypeInfo();
 
+    Type* type;  // 变量、类型、表达式结点，有类型。
+
     int int_val;
+    char char_val;
     bool bool_val;
     StmtType stmtType;
-    OpType opType;
+    OpType opType;  //如果是表达式
     VarType varType;
+    string str_val;
     string var_name;
+
+    static string nodeTypeToString(NodeType type);
+    static string opTypeToString(OpType type);
+    static string sTypeToString(StmtType type);
 
     TreeNode(NodeType mytype);
 };

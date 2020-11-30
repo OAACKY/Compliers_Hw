@@ -9,3 +9,6 @@ test/*.res
 !common.h
 !tree.h
 !tree.cpp
+!type.h
+!type.cpp
+!pch.h

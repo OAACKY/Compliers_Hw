@@ -62,12 +62,42 @@ string TreeNode::nodeTypeInfo(){
     case NODE_STMT:
 
         break;
+    case NODE_CONST:
 
+        break;
+    case NODE_BOOL:
+
+        break;
+    case NODE_EXPR:
+
+        break;
+    case NODE_OP:
+
+        break;
+    case NODE_VAR:
+
+        break;
+    case NODE_TYPE:
+
+        break;
     default:
+        return "";
         break;
     }
 }
 
+string TreeNode::opTypeToString(OpType type){
+    return "";
+}
+
+string TreeNode::nodeTypeToString(NodeType type){
+    return "";
+}
+
+string TreeNode::sTypeToString(StmtType type){
+    return "";
+}
+
 TreeNode::TreeNode(NodeType mytype){
-    
+    this->nodeType=mytype;
 }

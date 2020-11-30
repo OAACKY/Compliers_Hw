@@ -8,7 +8,7 @@
 
 %start program
 
-%token ID INTEGER
+%token ID INTEGER CONSTRING
 %token IF ELSE WHILE
 %token INT VOID CHAR
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON
@@ -31,10 +31,9 @@
 %left EQUAL NEQUAL
 %left MT LT MTOE LTOE
 %left ADD SUB
-%left MUL SUB MOD
-%left EQUAL
+%left MUL DIV MOD
 %right NOT
-%right UMINUS
+%right UMINUS UADD
 %nonassoc LOWER_THEN_ELSE
 %nonassoc ELSE 
 %%
@@ -152,16 +151,11 @@ bool_expr
         node->addChild($3);
         $$=node;     
     }
-    | NOT bool_expr {
-        TreeNode *node=new TreeNode(NODE_OP);
-        node->opType=OP_NOT;
-        node->addChild($2);
-        $$=node;        
-    }
     ;
 expr
     : ID {$$=$1;}
     | INTEGER {$$=$1;}
+    | CONSTRING {$$=$1;}
     | expr ADD expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_ADD;
@@ -169,61 +163,68 @@ expr
         node->addChild($3);
         $$=node;   
     }
-    | exer SUB expr {
+    | expr SUB expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_SUB;
         node->addChild($1);
         node->addChild($3);
         $$=node; 
     }
-    | exer MUL expr {
+    | expr MUL expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_MUL;
         node->addChild($1);
         node->addChild($3);
         $$=node; 
     }
-    | exer DIV expr {
+    | expr DIV expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_DIV;
         node->addChild($1);
         node->addChild($3);
         $$=node; 
     }
-    | exer MOD expr {
+    | expr MOD expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_MOD;
         node->addChild($1);
         node->addChild($3);
         $$=node; 
     }
-    | exer MT expr {
+    | expr MT expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_MT;
         node->addChild($1);
         node->addChild($3);
         $$=node; 
     }
-    | exer LT expr {
+    | expr LT expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_LT;
         node->addChild($1);
         node->addChild($3);
         $$=node; 
     }
-    | exer MTOE expr {
+    | expr MTOE expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_MTOE;
         node->addChild($1);
         node->addChild($3);
         $$=node; 
     }
-    | exer LTOE expr {
+    | expr LTOE expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_LTOE;
         node->addChild($1);
         node->addChild($3);
         $$=node; 
+    }
+    | SUB expr %prec UMINUS {
+        $2->int_val=-$2->int_val;
+        $$=$2;
+    }
+    | ADD expr %prec UADD {
+        $$=$2;
     }
     ;
 type

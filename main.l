@@ -84,7 +84,14 @@ WHITE [\t ]
 
 {CONSTRING} {
     TreeNode *node = new TreeNode(NODE_CONST);
-    //need to add
+    string tempString=string(yytext);
+    int temp=1;
+    while(temp!=tempString.length()-1){
+        node->str_val+=yytext[temp];
+        temp++;
+    }
+    yylval = node;
+    return CONSTRING;
     
 }
 

@@ -25,10 +25,16 @@
 %token NOT
 %token PRINTF SCANF
 
-%right NOT
-%left ADD
-%left EQUAL
 %right ASSIGN
+%left OR
+%left AND
+%left EQUAL NEQUAL
+%left MT LT MTOE LTOE
+%left ADD SUB
+%left MUL SUB MOD
+%left EQUAL
+%right NOT
+%right UMINUS
 %nonassoc LOWER_THEN_ELSE
 %nonassoc ELSE 
 %%
@@ -119,6 +125,33 @@ bool_expr
         node->addChild($3);
         $$=node;
     }
+    | expr NEQUAL expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_NEQUAL;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node;
+    }
+    | NOT bool_expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_NOT;
+        node->addChild($2);
+        $$=node;        
+    }
+    | bool_expr AND bool_expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_AND;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node;     
+    }
+    | bool_expr OR bool_expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_OR;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node;     
+    }
     | NOT bool_expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_NOT;
@@ -136,6 +169,62 @@ expr
         node->addChild($3);
         $$=node;   
     }
+    | exer SUB expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_SUB;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | exer MUL expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_MUL;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | exer DIV expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_DIV;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | exer MOD expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_MOD;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | exer MT expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_MT;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | exer LT expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_LT;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | exer MTOE expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_MTOE;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | exer LTOE expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_LTOE;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
     ;
 type
     : INT {
@@ -146,6 +235,11 @@ type
     | VOID {
         TreeNode *node=new TreeNode(NODE_TYPE);
         node->varType=VAR_VOID;
+        $$=node;         
+    }
+    | CHAR {
+        TreeNode *node=new TreeNode(NODE_TYPE);
+        node->varType=VAR_CHAR;
         $$=node;         
     }
     ;

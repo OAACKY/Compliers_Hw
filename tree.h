@@ -30,13 +30,25 @@ enum StmtType{
 
 enum OpType{
     OP_EQUAL,
+    OP_NEQUAL,
+    OP_OR,
+    OP_AND,
     OP_NOT,
     OP_ADD,
+    OP_SUB,
+    OP_MUL,
+    OP_DIV,
+    OP_MOD,
+    OP_MT,
+    OP_LT,
+    OP_MTOE,
+    OP_LTOE
 };
 
 enum VarType{
     VAR_INTEGER,
-    VAR_VOID
+    VAR_VOID,
+    VAR_CHAR
 };
 
 struct TreeNode {

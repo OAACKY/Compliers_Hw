@@ -67,6 +67,6 @@ struct TreeNode {
     VarType varType;
     string var_name;
 
-    TreeNode(NodeType type);
+    TreeNode(NodeType mytype);
 };
 #endif

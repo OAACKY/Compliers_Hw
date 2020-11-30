@@ -58,9 +58,23 @@ WHITE [\t ]
 "=" return ASSIGN;
 
 "+" return ADD;
+"-" return SUB;
+"*" return MUL;
+"/" return DIV;
+"%" return MOD;
+
 
 "!" return NOT;
+
+"&&" return AND;
+"||" return OR;
+
 "==" return EQUAL;
+"!=" return NEQUAL;
+">"  return MT;
+"<"  return LT;
+">=" return MTOE;
+"<=" return LTOE;
 
 ";" return SEMICOLON;
 "(" return LPAREN;

@@ -27,6 +27,6 @@ string nodeTypeInfo(){
 
 }
 
-TreeNode(NodeType type){
+TreeNode::TreeNode(NodeType mytype){
     
 }

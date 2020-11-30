@@ -10,10 +10,19 @@
 
 %token ID INTEGER
 %token IF ELSE WHILE
-%token INT VOID
+%token INT VOID CHAR
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON
 %token TRUE FALSE
-%token ADD ASSIGN EQUAL NOT
+
+
+%token ASSIGN
+%token OR
+%token AND
+%token EQUAL NEQUAL
+%token MT LT MTOE LTOE
+%token ADD SUB
+%token MUL DIV MOD
+%token NOT
 %token PRINTF SCANF
 
 %right NOT

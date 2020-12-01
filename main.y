@@ -11,7 +11,7 @@
 %token ID INTEGER CONSTRING
 %token IF ELSE WHILE
 %token INT VOID CHAR
-%token LPAREN RPAREN LBRACE RBRACE SEMICOLON
+%token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
 %token TRUE FALSE
 
 
@@ -49,7 +49,18 @@ statement
     | if_else {$$=$1;}
     | while {$$=$1;}
     | LBRACE statements RBRACE {$$=$2;}
+    | func_decl {$$=$1;}
     ;
+
+func_decl
+    : type ID LPAREN RPAREN LBRACE statement RBRACE{
+        TreeNode *node=new TreeNode(NODE_FUNC);
+        node->addChild($1);
+        node->addChild($2);
+        node->addChild($6);
+        $$=node;
+    }
+
 if_else
     : IF bool_statment statement %prec LOWER_THEN_ELSE {
         TreeNode *node=new TreeNode(NODE_STMT);
@@ -95,9 +106,28 @@ instruction
         node->addChild($3);
         $$=node;  
     }
+    | type IDlist SEMICOLON {
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_DECL;
+        node->addChild($1);
+        node->addChild($2);
+        $$=node;
+    }
     | printf SEMICOLON {$$=$1;}
     | scanf SEMICOLON {$$=$1;}
     ;
+IDlist
+    : ID {
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_IDLIST;
+        node->addChild($1);
+        $$=node;
+    }
+    | IDlist COMMA ID {
+        $1->addChild($3);
+        $$=$1;
+    }
+
 printf
     : PRINTF LPAREN expr RPAREN {
         TreeNode *node=new TreeNode(NODE_STMT);

@@ -9,13 +9,13 @@ using std::string;
 
 enum NodeType{
     NODE_CONST,
-    NODE_BOOL,
     NODE_VAR,
-    NODE_EXPR,
     NODE_TYPE,
     NODE_STMT,
     NODE_PROG,
-    NODE_OP
+    NODE_OP,
+    NODE_FUNC,
+    NODE_BOOL
 };
 
 enum StmtType{
@@ -24,7 +24,8 @@ enum StmtType{
     STMT_DECL,
     STMT_ASSIGN,
     STMT_PRINTF,
-    STMT_SCANF
+    STMT_SCANF,
+    STMT_IDLIST
 };
 
 enum OpType{
@@ -50,6 +51,12 @@ enum VarType{
     VAR_CHAR
 };
 
+enum ConsType{
+    CONS_INTEGER,
+    CONS_STRING,
+    CONS_CHAR
+};
+
 struct TreeNode {
 public:
     int nodeID;
@@ -70,7 +77,7 @@ public:
     ***/
     void printNodeInfo();
     void printNodeConnection();
-    string nodeTypeInfo();
+    void nodeTypeInfo();
 
     Type* type;  // 变量、类型、表达式结点，有类型。
 
@@ -80,10 +87,12 @@ public:
     StmtType stmtType;
     OpType opType;  //如果是表达式
     VarType varType;
+    ConsType consType;
     string str_val;
     string var_name;
 
-    static string nodeTypeToString(NodeType type);
+    static string consTypeToString(ConsType type);
+    static string varTypeToString(VarType type);
     static string opTypeToString(OpType type);
     static string sTypeToString(StmtType type);
 

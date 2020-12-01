@@ -76,6 +76,7 @@ WHITE [\t ]
 ">=" return MTOE;
 "<=" return LTOE;
 
+"," return COMMA;
 ";" return SEMICOLON;
 "(" return LPAREN;
 ")" return RPAREN;
@@ -91,14 +92,15 @@ WHITE [\t ]
         temp++;
     }
     yylval = node;
+    node->consType = CONS_STRING;
     return CONSTRING;
-    
 }
 
 
 {INTEGER} {
     TreeNode *node = new TreeNode(NODE_CONST);
     node->int_val = atoi(yytext);
+    node->consType = CONS_INTEGER;
     yylval = node;
     return INTEGER;
 }

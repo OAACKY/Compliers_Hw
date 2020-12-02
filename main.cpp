@@ -4,13 +4,27 @@
 
 
 using namespace std;
+
+extern FILE *yyin;
 TreeNode *root=nullptr;
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc == 2)
+    {
+        FILE *fin = fopen(argv[1], "r");
+        if (fin != nullptr)
+        {
+            yyin = fin;
+        }
+        else
+        {
+            cerr << "failed to open file: " << argv[1] << endl;
+        }
+    }
     yyparse();
-    if(root){//若存在语法树结点
-        root->genNodeId();//将整棵语法树赋予id
-        root->printAST();//打印相关信息
+    if(root != NULL) {
+        root->genNodeId();
+        root->printAST();
     }
     return 0;
 }

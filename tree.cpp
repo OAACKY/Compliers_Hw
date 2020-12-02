@@ -5,7 +5,7 @@ void TreeNode::addChild(TreeNode *temp){
         this->child=temp;
     else{
         TreeNode *tempNode;
-        tempNode=this;
+        tempNode=this->child;
         while(tempNode->sibling!=nullptr){
             tempNode=tempNode->sibling;
         }
@@ -14,7 +14,11 @@ void TreeNode::addChild(TreeNode *temp){
 }
 
 void TreeNode::addSibling(TreeNode *temp){
-    this->sibling=temp; 
+    TreeNode *myTemp=this;
+    while(myTemp->sibling!=nullptr){
+        myTemp=myTemp->sibling;
+    }
+    myTemp->sibling=temp;
 }
 
 int tempNodeId=0;
@@ -29,6 +33,7 @@ void dfs(TreeNode *node){
 
 void TreeNode::genNodeId(){
     dfs(this);
+    cout<<tempNodeId<<endl;
 }
 
 void printDfs(TreeNode *node){

@@ -8,6 +8,7 @@
 
 %start program
 
+%token BREAK CONTINUE RETURN
 %token ID INTEGER CONSTRING
 %token IF ELSE WHILE FOR
 %token INT VOID CHAR
@@ -52,6 +53,7 @@ statement
     | for {$$=$1;}
     | LBRACE statements RBRACE {$$=$2;}
     | func_decl {$$=$1;}
+    | loop {$$=$1;}
     ;
 
 func_decl
@@ -335,5 +337,27 @@ type
     ;
 exassign
     : ASSIGN | ADDASSIGN | SUBASSIGN | MULASSIGN | DIVASSIGN | MODASSIGN
+    ;
+loop
+    :
+    RETURN expr SEMICOLON{
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_LOOP;
+        node->loopType=LOOP_RETURN;
+        node->addChild($2);
+        $$=node;
+    }
+    | BREAK SEMICOLON{
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_LOOP;
+        node->loopType=LOOP_BREAK;
+        $$=node;
+    }
+    | CONTINUE SEMICOLON{
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_LOOP;
+        node->loopType=LOOP_CONTINUE;
+        $$=node;
+    }
     ;
 %%

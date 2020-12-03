@@ -7,6 +7,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
+
 enum NodeType{
     NODE_CONST,
     NODE_VAR,
@@ -28,7 +29,8 @@ enum StmtType{
     STMT_IO,
     STMT_IDLIST,
     STMT_FOR,
-    STMT_FOR_ST
+    STMT_FOR_ST,
+    STMT_LOOP
 };
 
 enum OpType{
@@ -62,6 +64,12 @@ enum ConsType{
     CONS_CHAR
 };
 
+enum LoopType{
+    LOOP_RETURN,
+    LOOP_BREAK,
+    LOOP_CONTINUE
+};
+
 struct TreeNode {
 public:
     int nodeID;
@@ -84,7 +92,11 @@ public:
     void printNodeConnection();
     void nodeTypeInfo();
 
+    void symbolTable(TreeNode *);
+
     Type* type;  // 变量、类型、表达式结点，有类型。
+    
+    int scope;
 
     int int_val;
     char char_val;
@@ -93,9 +105,11 @@ public:
     OpType opType;  //如果是表达式
     VarType varType;
     ConsType consType;
+    LoopType loopType;
     string str_val;
     string var_name;
 
+    static string loopTypeToString(LoopType type);
     static string consTypeToString(ConsType type);
     static string varTypeToString(VarType type);
     static string opTypeToString(OpType type);

@@ -53,6 +53,10 @@ WHITE [\t ]
 "else" return ELSE;
 "for" return FOR;
 
+"return" return RETURN;
+"break" return BREAK;
+"continue" return CONTINUE;
+
 "printf" return PRINTF;
 "scanf" return SCANF;
 

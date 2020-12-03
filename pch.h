@@ -13,10 +13,11 @@
 #include <string>
 #include <list>
 #include <assert.h>
-#include<iomanip>
+#include <iomanip>
 
 #include <map>
 #include <stack>
+#include <vector>
 #include <unordered_map>
 
 #endif

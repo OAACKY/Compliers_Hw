@@ -1,5 +1,9 @@
 #include "tree.h"
 
+map<string,map<int,int> > int_scope;
+map<string,map<int,string> > string_scope;
+
+
 void TreeNode::addChild(TreeNode *temp){
     if(this->child==nullptr)
         this->child=temp;
@@ -34,6 +38,7 @@ void dfs(TreeNode *node){
 void TreeNode::genNodeId(){
     dfs(this);
     cout<<tempNodeId<<endl;
+    symbolTable(this);
 }
 
 void printDfs(TreeNode *node){
@@ -77,9 +82,16 @@ void TreeNode::nodeTypeInfo(){
         break;
     case NODE_STMT:
         cout<<"statement   stmt: "<<sTypeToString(this->stmtType)<<" ";
+        if(this->stmtType==STMT_LOOP)
+        cout<<loopTypeToString(this->loopType)<<" ";
         break;
     case NODE_CONST:
         cout<<"const type: "<<consTypeToString(this->consType)<<" ";
+        if(this->consType==CONS_INTEGER)
+        cout<<this->int_val<<" ";
+        else if(this->consType==CONS_STRING)
+        cout<<this->str_val<<" ";
+        break;
         break;
     case NODE_OP:
         cout<<opTypeToString(this->opType)<<" ";
@@ -187,6 +199,23 @@ string TreeNode::varTypeToString(VarType type){
     }
 }
 
+string TreeNode::loopTypeToString(LoopType type){
+    switch (type)
+    {
+    case LOOP_RETURN:
+        return "return";
+        break;
+    case LOOP_BREAK:
+        return "break";
+        break;
+    case LOOP_CONTINUE:
+        return "continue";
+        break;
+    default:
+        return "error";
+    }
+}
+
 string TreeNode::sTypeToString(StmtType type){
     switch (type)
     {
@@ -220,6 +249,9 @@ string TreeNode::sTypeToString(StmtType type){
     case STMT_FOR_ST:
         return "for_st";
         break;
+    case STMT_LOOP:
+        return "loop";
+        break;
     default:
         return "error";
     }
@@ -228,3 +260,9 @@ string TreeNode::sTypeToString(StmtType type){
 TreeNode::TreeNode(NodeType mytype){
     this->nodeType=mytype;
 }
+
+void TreeNode::symbolTable(TreeNode *temp){
+    int tempScope=0;
+
+}
+

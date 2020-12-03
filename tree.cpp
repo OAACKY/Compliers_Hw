@@ -90,6 +90,8 @@ void TreeNode::nodeTypeInfo(){
     case NODE_TYPE:
         cout<<"type type: "<<varTypeToString(this->varType)<<" ";
         break;
+    case NODE_FUNC:
+        cout<<"function funcname: "<<this->var_name<<" ";
     default:
         break;
     }
@@ -139,6 +141,12 @@ string TreeNode::opTypeToString(OpType type){
         break;
     case OP_NOT:
         return "not";
+        break;
+    case OP_AA:
+        return "selfadd";
+        break;
+    case OP_SS:
+        return "selfsub";
         break;
     default:
         return "error";
@@ -191,6 +199,9 @@ string TreeNode::sTypeToString(StmtType type){
     case STMT_SCANF:
         return "scanf";
         break;
+    case STMT_IO:
+        return "io_content";
+        break;
     case STMT_WHILE:
         return "while";
         break;
@@ -202,6 +213,12 @@ string TreeNode::sTypeToString(StmtType type){
         break;
     case STMT_IDLIST:
         return "idlist";
+        break;
+    case STMT_FOR:
+        return "for";
+        break;
+    case STMT_FOR_ST:
+        return "for_st";
         break;
     default:
         return "error";

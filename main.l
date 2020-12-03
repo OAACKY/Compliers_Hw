@@ -51,11 +51,17 @@ WHITE [\t ]
 "if" return IF;
 "while" return WHILE;
 "else" return ELSE;
+"for" return FOR;
 
 "printf" return PRINTF;
 "scanf" return SCANF;
 
 "=" return ASSIGN;
+"+=" return ADDASSIGN;
+"-=" return SUBASSIGN;
+"*=" return MULASSIGN;
+"/=" return DIVASSIGN;
+"%=" return MODASSIGN;
 
 "+" return ADD;
 "-" return SUB;
@@ -63,8 +69,12 @@ WHITE [\t ]
 "/" return DIV;
 "%" return MOD;
 
+"++" return AA;
+"--" return SS;
+
 
 "!" return NOT;
+"&" return A;
 
 "&&" return AND;
 "||" return OR;

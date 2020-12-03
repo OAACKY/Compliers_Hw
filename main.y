@@ -9,19 +9,20 @@
 %start program
 
 %token ID INTEGER CONSTRING
-%token IF ELSE WHILE
+%token IF ELSE WHILE FOR
 %token INT VOID CHAR
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
 %token TRUE FALSE
 
 
-%token ASSIGN
-%token OR
+%token ASSIGN ADDASSIGN SUBASSIGN MULASSIGN DIVASSIGN MODASSIGN
+%token OR A
 %token AND
 %token EQUAL NEQUAL
 %token MT LT MTOE LTOE
 %token ADD SUB
 %token MUL DIV MOD
+%token AA SS
 %token NOT
 %token PRINTF SCANF
 
@@ -48,16 +49,17 @@ statement
     : instruction {$$=$1;}
     | if_else {$$=$1;}
     | while {$$=$1;}
+    | for {$$=$1;}
     | LBRACE statements RBRACE {$$=$2;}
     | func_decl {$$=$1;}
     ;
 
 func_decl
-    : type ID LPAREN RPAREN LBRACE statement RBRACE{
+    : type ID LPAREN RPAREN statement{
         TreeNode *node=new TreeNode(NODE_FUNC);
+        node->var_name=$2->var_name;
         node->addChild($1);
-        node->addChild($2);
-        node->addChild($6);
+        node->addChild($5);
         $$=node;
     }
 
@@ -87,6 +89,23 @@ while
         $$=node;
     }
     ;
+for
+    : FOR for_statment statement {
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_FOR;
+        node->addChild($2);
+        node->addChild($3);
+        $$=node;
+    }
+for_statment
+    : LPAREN instruction bool_expr SEMICOLON expr RPAREN {
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_FOR_ST;
+        node->addChild($2);
+        node->addChild($3);
+        node->addChild($5);
+        $$=node;
+    }
 bool_statment
     : LPAREN bool_expr RPAREN {$$=$2;}
     ;
@@ -99,7 +118,7 @@ instruction
         node->addChild($4);
         $$=node;
     }
-    | ID ASSIGN expr SEMICOLON {
+    | ID exassign expr SEMICOLON {
         TreeNode *node=new TreeNode(NODE_STMT);
         node->stmtType=STMT_ASSIGN;
         node->addChild($1);
@@ -129,7 +148,7 @@ IDlist
     }
 
 printf
-    : PRINTF LPAREN expr RPAREN {
+    : PRINTF LPAREN io_stmt RPAREN {
         TreeNode *node=new TreeNode(NODE_STMT);
         node->stmtType=STMT_PRINTF;
         node->addChild($3);
@@ -137,12 +156,28 @@ printf
     }
     ;
 scanf
-    : SCANF LPAREN expr RPAREN {
+    : SCANF LPAREN io_stmt RPAREN {
         TreeNode *node=new TreeNode(NODE_STMT);
         node->stmtType=STMT_SCANF;
         node->addChild($3);
         $$=node;
     }
+io_stmt
+    : CONSTRING COMMA io_expr{
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_IO;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node;
+    }
+    | io_stmt COMMA io_expr {
+        $1->addChild($3);
+        $$=$1;
+    }
+io_expr
+    : INTEGER {$$=$1;}
+    | A ID {$$=$2;}
+    | ID {$$=$1;}
     ;
 bool_expr
     : TRUE {$$=$1;}
@@ -181,11 +216,63 @@ bool_expr
         node->addChild($3);
         $$=node;     
     }
+    | expr MT expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_MT;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | expr LT expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_LT;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | expr MTOE expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_MTOE;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
+    | expr LTOE expr {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_LTOE;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node; 
+    }
     ;
 expr
     : ID {$$=$1;}
     | INTEGER {$$=$1;}
     | CONSTRING {$$=$1;}
+    | ID AA {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_AA;
+        node->addChild($1);
+        $$=node;
+    }
+    | ID SS {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_SS;
+        node->addChild($1);
+        $$=node;
+    }
+    | AA ID {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_AA;
+        node->addChild($2);
+        $$=node;
+    }
+    | SS ID {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->opType=OP_SS;
+        node->addChild($2);
+        $$=node;
+    }
     | expr ADD expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_ADD;
@@ -221,34 +308,6 @@ expr
         node->addChild($3);
         $$=node; 
     }
-    | expr MT expr {
-        TreeNode *node=new TreeNode(NODE_OP);
-        node->opType=OP_MT;
-        node->addChild($1);
-        node->addChild($3);
-        $$=node; 
-    }
-    | expr LT expr {
-        TreeNode *node=new TreeNode(NODE_OP);
-        node->opType=OP_LT;
-        node->addChild($1);
-        node->addChild($3);
-        $$=node; 
-    }
-    | expr MTOE expr {
-        TreeNode *node=new TreeNode(NODE_OP);
-        node->opType=OP_MTOE;
-        node->addChild($1);
-        node->addChild($3);
-        $$=node; 
-    }
-    | expr LTOE expr {
-        TreeNode *node=new TreeNode(NODE_OP);
-        node->opType=OP_LTOE;
-        node->addChild($1);
-        node->addChild($3);
-        $$=node; 
-    }
     | SUB expr %prec UMINUS {
         $2->int_val=-$2->int_val;
         $$=$2;
@@ -274,5 +333,7 @@ type
         $$=node;         
     }
     ;
-
+exassign
+    : ASSIGN | ADDASSIGN | SUBASSIGN | MULASSIGN | DIVASSIGN | MODASSIGN
+    ;
 %%

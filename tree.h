@@ -15,7 +15,7 @@ enum NodeType{
     NODE_PROG,
     NODE_OP,
     NODE_FUNC,
-    NODE_BOOL
+    NODE_BOOL,
 };
 
 enum StmtType{
@@ -25,7 +25,10 @@ enum StmtType{
     STMT_ASSIGN,
     STMT_PRINTF,
     STMT_SCANF,
-    STMT_IDLIST
+    STMT_IO,
+    STMT_IDLIST,
+    STMT_FOR,
+    STMT_FOR_ST
 };
 
 enum OpType{
@@ -42,7 +45,9 @@ enum OpType{
     OP_MT,
     OP_LT,
     OP_MTOE,
-    OP_LTOE
+    OP_LTOE,
+    OP_AA,
+    OP_SS
 };
 
 enum VarType{

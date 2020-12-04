@@ -1,7 +1,7 @@
 #include "tree.h"
 
 map<string,map<int,int> > int_scope;
-map<string,map<int,string> > string_scope;
+map<string,map<int,char> > char_scope;
 
 
 void TreeNode::addChild(TreeNode *temp){
@@ -261,8 +261,26 @@ TreeNode::TreeNode(NodeType mytype){
     this->nodeType=mytype;
 }
 
-void TreeNode::symbolTable(TreeNode *temp){
+void TreeNode::symbolTable(TreeNode *node){
     int tempScope=0;
+    TreeNode *temp=node->child;
+    while(temp!=nullptr){
+        if(temp->nodeType==NODE_STMT&&temp->stmtType==STMT_DECL){
+            switch (temp->child->varType)
+            {
+            case VAR_INTEGER:
+                int_scope[temp->sibling->var_name][node->nodeID]=0;
+                break;
+            case VAR_CHAR:
+                char_scope[temp->sibling->var_name][node->nodeID]='0';
+                break;
+            default:
+                break;
+            }
+        }
+        symbolTable(temp);
+        temp=temp->sibling;
+    }
 
 }
 

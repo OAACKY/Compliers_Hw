@@ -116,5 +116,6 @@ public:
     static string sTypeToString(StmtType type);
 
     TreeNode(NodeType mytype);
+    void type_check(TreeNode*);
 };
 #endif

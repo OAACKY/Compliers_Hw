@@ -1,6 +1,7 @@
 test/*.res
 test/*.output
 test/test.c
+bin/*
 /*.cpp
 /*.cc
 /*.hh

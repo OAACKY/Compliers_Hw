@@ -2,6 +2,6 @@
 #define COMMON_H
 
 #include "tree.h"
-#define YYSTYPE Node *
+#define YYSTYPE TreeNode *
 
 #endif

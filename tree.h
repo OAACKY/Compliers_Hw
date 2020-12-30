@@ -1,121 +1,101 @@
 #ifndef TREE_H
 #define TREE_H
-#include "type.h"
-
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::string;
-
-
-enum NodeType{
-    NODE_CONST,
-    NODE_VAR,
-    NODE_TYPE,
-    NODE_STMT,
-    NODE_PROG,
-    NODE_OP,
-    NODE_FUNC,
-    NODE_BOOL,
+enum
+{
+	STMT_NODE = 0,
+	EXPR_NODE,
+	DECL_NODE
 };
 
-enum StmtType{
-    STMT_IF,
-    STMT_WHILE,
-    STMT_DECL,
-    STMT_ASSIGN,
-    STMT_PRINTF,
-    STMT_SCANF,
-    STMT_IO,
-    STMT_IDLIST,
-    STMT_FOR,
-    STMT_FOR_ST,
-    STMT_LOOP
+enum
+{
+	WHILE_STMT = 0,
+	PRINT_STMT,
+	COMP_STMT
 };
 
-enum OpType{
-    OP_EQUAL,
-    OP_NEQUAL,
-    OP_OR,
-    OP_AND,
-    OP_NOT,
-    OP_ADD,
-    OP_SUB,
-    OP_MUL,
-    OP_DIV,
-    OP_MOD,
-    OP_MT,
-    OP_LT,
-    OP_MTOE,
-    OP_LTOE,
-    OP_AA,
-    OP_SS
+enum
+{
+	TYPE_EXPR = 0,
+	OP_EXPR,
+    CONST_EXPR,
+	ID_EXPR
 };
 
-enum VarType{
-    VAR_INTEGER,
-    VAR_VOID,
-    VAR_CHAR
+enum
+{
+	VAR_DECL = 0,
 };
 
-enum ConsType{
-    CONS_INTEGER,
-    CONS_STRING,
-    CONS_CHAR
+enum
+{
+	Notype = 0,
+	Integer,
+	Boolean,
 };
 
-enum LoopType{
-    LOOP_RETURN,
-    LOOP_BREAK,
-    LOOP_CONTINUE
+#define MAX_CHILDREN 4
+
+
+union NodeAttr {
+	int op;
+	int vali;
+	char valc;
+	int symtbl_seq;
+	
+	NodeAttr(void) { op = 0; }
+	NodeAttr(int i)	{ op = i; }
+	NodeAttr(char c) { valc = c; }
 };
 
-struct TreeNode {
+struct Label {
+	string true_label;
+	string false_label;
+	string begin_label;
+	string next_label;
+};
+
+struct Node
+{
+	struct Node *children[MAX_CHILDREN];
+	struct Node *sibling;
+	int lineno;
+	int kind;
+	int kind_kind;
+	NodeAttr attr;
+	int type;
+	int seq;
+	int temp_var;
+	Label label;
+
+	void output(void);
+};
+
+class tree
+{
+private:
+	Node *root;
+	int node_seq = 0;
+	int temp_var_seq = 0;
+	int label_seq = 0;
+
+private:
+	void type_check(Node *t);
+	void get_temp_var(Node *t);
+	string new_label(void);
+	void recursive_get_label(Node *t);
+	void stmt_get_label(Node *t);
+	void expr_get_label(Node *t);
+	void gen_header(ostream &out);
+	void gen_decl(ostream &out, Node *t);
+	void recursive_gen_code(ostream &out, Node *t);
+	void stmt_gen_code(ostream &out, Node *t);
+	void expr_gen_code(ostream &out, Node *t);
+
 public:
-    int nodeID;
-    NodeType nodeType;
-
-    TreeNode *child = nullptr;
-    TreeNode *sibling = nullptr;
-
-    void addChild(TreeNode *);
-    void addSibling(TreeNode *);
-
-    void genNodeId();//从根节点开始逐个赋Id 实现方式同学们可以自行修改
-
-    void printAST();//打印语法树结点
-    /***
-     * 以下的几个函数皆为在printAST过程中辅助输出使用
-     * 同学们可以根据需要自己使用其他方法
-    ***/
-    void printNodeInfo();
-    void printNodeConnection();
-    void nodeTypeInfo();
-
-    void symbolTable(TreeNode *);
-
-    Type* type;  // 变量、类型、表达式结点，有类型。
-    
-    int scope;
-
-    int int_val;
-    char char_val;
-    bool bool_val;
-    StmtType stmtType;
-    OpType opType;  //如果是表达式
-    VarType varType;
-    ConsType consType;
-    LoopType loopType;
-    string str_val;
-    string var_name;
-
-    static string loopTypeToString(LoopType type);
-    static string consTypeToString(ConsType type);
-    static string varTypeToString(VarType type);
-    static string opTypeToString(OpType type);
-    static string sTypeToString(StmtType type);
-
-    TreeNode(NodeType mytype);
-    void type_check(TreeNode*);
+	Node *NewRoot(int kind, int kind_kind, NodeAttr attr, int type,
+		Node *child1 = NULL, Node *child2 = NULL, Node *child3 = NULL, Node *child4 = NULL);
+	void get_label(void);
+	void gen_code(ostream &out);
 };
 #endif

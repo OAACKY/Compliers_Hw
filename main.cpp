@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
         root->genNodeId();
         root->printAST();
     }
+    root->Type_Check(root);//类型检查
     return 0;
 }
 int yyerror(char const* message)

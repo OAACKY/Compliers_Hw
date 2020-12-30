@@ -127,6 +127,13 @@ instruction
         node->addChild($3);
         $$=node;  
     }
+    | ID exassign instruction {
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_ASSIGN;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node;
+    }
     | type IDlist SEMICOLON {
         TreeNode *node=new TreeNode(NODE_STMT);
         node->stmtType=STMT_DECL;
@@ -172,6 +179,12 @@ io_stmt
         node->addChild($3);
         $$=node;
     }
+    | CONSTRING {
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_IO;
+        node->addChild($1);
+        $$=node;
+    }
     | io_stmt COMMA io_expr {
         $1->addChild($3);
         $$=$1;
@@ -184,6 +197,7 @@ io_expr
 bool_expr
     : TRUE {$$=$1;}
     | FALSE {$$=$1;}
+    | LPAREN bool_expr RPAREN {$$=$2;}
     | expr EQUAL expr {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_EQUAL;
@@ -251,6 +265,14 @@ expr
     : ID {$$=$1;}
     | INTEGER {$$=$1;}
     | CONSTRING {$$=$1;}
+    | LPAREN expr RPAREN {$$=$2;}
+    | ID exassign expr {
+        TreeNode *node=new TreeNode(NODE_STMT);
+        node->stmtType=STMT_ASSIGN;
+        node->addChild($1);
+        node->addChild($3);
+        $$=node;  
+    }
     | ID AA {
         TreeNode *node=new TreeNode(NODE_OP);
         node->opType=OP_AA;

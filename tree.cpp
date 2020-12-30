@@ -284,6 +284,6 @@ void TreeNode::symbolTable(TreeNode *node){
 
 }
 
-void TreeNode::type_check(TreeNode *node){
+void TreeNode::Type_Check(TreeNode *node){
     
 }

@@ -84,9 +84,9 @@ public:
     void genNodeId();//从根节点开始逐个赋Id 实现方式同学们可以自行修改
 
     void printAST();//打印语法树结点
+    void Type_Check(TreeNode *);   //类型检查
     /***
      * 以下的几个函数皆为在printAST过程中辅助输出使用
-     * 同学们可以根据需要自己使用其他方法
     ***/
     void printNodeInfo();
     void printNodeConnection();
@@ -116,6 +116,5 @@ public:
     static string sTypeToString(StmtType type);
 
     TreeNode(NodeType mytype);
-    void type_check(TreeNode*);
 };
 #endif

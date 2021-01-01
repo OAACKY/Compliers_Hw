@@ -9,6 +9,13 @@ using std::endl;
 using std::string;
 
 
+struct Label {
+    string true_label;
+    string false_label;
+    string begin_label;
+    string next_label;
+};
+
 
 
 struct TreeNode {
@@ -58,5 +65,26 @@ public:
     static string sTypeToString(StmtType type);
 
     TreeNode(NodeType mytype);
+    static int node_seq=0;       //对所有node均为相同的值
+    static int temp_var_seq=0;
+    static int label_seq=0;
+    Label label;     //每个语法树节点的标签
+
+    int temp_var;     //变量的标号
+    //标签与代码生成
+    void get_temp_var(TreeNode *);
+    string new_label(void);
+    void recursive_get_label(TreeNode *);
+    void stmt_get_label(TreeNode *);
+    void expr_get_label(TreeNode *);
+    void gen_header(ostream &out);
+    void gen_decl(ostream &out,TreeNode *);
+    void recursive_gen_code(ostream &out,TreeNode *);
+    void stmt_gen_code(ostream &out,TreeNode *);
+    void expr_gen_code(ostream &out,TreeNode *);
+
+    void get_label(TreeNode *);
+    void gen_code(ostream &out,TreeNode *);
+
 };
 #endif

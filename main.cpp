@@ -7,6 +7,7 @@ using namespace std;
 
 extern FILE *yyin;
 TreeNode *root=nullptr;
+ostream *asm_out;
 int main(int argc, char *argv[])
 {
     if (argc == 2)
@@ -20,13 +21,21 @@ int main(int argc, char *argv[])
         {
             cerr << "failed to open file: " << argv[1] << endl;
         }
+    } else if(argc == 3){
+        yyin = fopen(argv[1],"r");
+        asm_out = new ofstream(argv[2]);
+
     }
     yyparse();
     if(root != NULL) {
         root->genNodeId();
-        root->printAST();
+        //root->printAST();
     }
     //root->Type_Check(root);类型检查放在生成节点标号之后
+
+    root->get_label(root);
+    root->gen_code(*asm_out,root);
+
     return 0;
 }
 int yyerror(char const* message)

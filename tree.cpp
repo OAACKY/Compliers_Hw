@@ -319,9 +319,11 @@ void TreeNode::symbolTable(TreeNode *node,symbol_table *table){
                         cout<<"Type Check Error!"<<endl;
                         return;
                     }
-                    if(temp->child->nodeType==NODE_VAR&&temp->child->varType!=VAR_INTEGER){
+                    if(temp->child->nodeType==NODE_VAR){
+                        if(table->findtype(table,temp->child->var_name)!=VAR_INTEGER){
                         cout<<"Type Check Error!"<<endl;
                         return;
+                        }
                     }
                 }
                 if(temp->child->sibling->nodeType!=NODE_OP){            //右儿子不为运算符
@@ -329,9 +331,11 @@ void TreeNode::symbolTable(TreeNode *node,symbol_table *table){
                         cout<<"Type Check Error!"<<endl;
                         return;
                     }
-                    if(temp->child->sibling->nodeType==NODE_VAR&&table->table_content[temp->child->sibling->var_name]->entry_type!=VAR_INTEGER){
+                    if(temp->child->sibling->nodeType==NODE_VAR){
+                        if(table->findtype(table,temp->child->sibling->var_name)!=VAR_INTEGER){
                         cout<<"Type Check Error!"<<endl;
                         return;
+                        }
                         //temp->child->sibling->belong_table->table_content[node->child->sibling->var_name]->entry_type
                     }
                     //cout<<"检查结束"<<node->child->sibling->varType<<endl;
@@ -381,3 +385,217 @@ void TreeNode::symbolTable(TreeNode *node,symbol_table *table){
 //     node=node->sibling;
 //     }
 // }
+
+void TreeNode::get_temp_var(TreeNode *node){
+    //待完善。。
+
+    TreeNode *arg1=node->child;
+    TreeNode *arg2=node->child->sibling;
+
+    if(arg1->nodeType==NODE_OP)
+        temp_var_seq--;
+    if(arg2&&arg2->nodeType==NODE_OP)
+        temp_var_seq--;
+    node->temp_var=temp_var_seq;
+    temp_var_seq++;
+
+}
+
+string TreeNode::new_label(){
+    string temp="@";
+    temp+=to_string(label_seq);
+    label_seq++;
+    return temp;
+}
+
+void TreeNode::recursive_get_label(TreeNode *node){
+    if(node->nodeType==NODE_STMT)
+        stmt_get_label(node);
+    else if(node->nodeType==NODE_OP)
+        expr_get_label(node);
+}
+
+void TreeNode::stmt_get_label(TreeNode *node){
+    switch (node->stmtType)
+    {
+    case STMT_WHILE:
+    {   
+        TreeNode *e= node->child;               //循环条件
+        TreeNode *s= node->child->sibling;      //循环体
+
+        if(node->label.begin_label=="")
+            node->label.begin_label=new_label();
+
+        //循环体的下一条语句(循环开始)
+        s->label.next_label = node->label.begin_label;
+
+        //循环体的开始标号即为循环条件的真值的标号
+        s->label.begin_label = e->label.true_label = new_label();
+
+        //循环结束的标号
+        if(node->label.next_label=="")
+            node->label.next_label=new_label();
+        
+        //循环条件的假值标号即为循环的下一条语句标号
+        e->label.false_label = node->label.next_label;
+
+        //兄弟节点的开始标号即为当前节点的下一条语句标号
+        if(node->sibling)
+            node->sibling->label.begin_label=node->label.next_label;
+        //递归生成
+        recursive_get_label(e);
+        recursive_get_label(s);
+        break;
+    }
+
+
+    default:
+        break;
+    }
+
+
+}
+
+void TreeNode::expr_get_label(TreeNode *node){
+    if(node->opType>OP_LTOE)
+        return;
+    TreeNode *e1= node->child;
+    TreeNode *e2= node->child->sibling;
+    switch (node->opType)
+    {
+    case OP_AND:
+        e1->label.true_label=new_label();
+        e2->label.true_label=node->label.true_label;
+        e1->label.false_label=e2->label.false_label=node->label.false_label;
+        break;
+    case OP_OR:
+
+        break;
+    case OP_NOT:
+
+        break;
+    case OP_EQUAL:
+
+        break;
+    case OP_NEQUAL:
+
+        break;
+    case OP_MT:
+
+        break;
+    case OP_MTOE:
+
+        break;
+    case OP_LT:
+
+        break;
+    case OP_LTOE:
+
+        break;
+    default:
+        break;
+    }
+}
+
+void TreeNode::gen_header(ostream &out){
+    out<< "# your asm code header here"<<endl;
+
+
+}
+
+void TreeNode::gen_decl(ostream &out,TreeNode *node){
+    out<<endl<< "# define your veriables and temp veriables here" << endl;
+    out << "\t.bss" << endl;
+    for(;node->stmtType==STMT_DECL;node=node->sibling){
+        for(TreeNode *p=node->child;p;p=p->sibling){
+            if(p->varType==VAR_INTEGER)
+                out<<"_"<<endl;         //待补充
+                out<<"\t.zero\t4"<<endl;
+                out<<"\t.align\t4"<<endl;
+        }
+
+    }
+
+    for(int i=0;i<temp_var_seq;i++){
+        out<<"t"<<i<<":"<<endl;
+        out<<"\t.zero\t4"<<endl;
+        out<<"\t.align\t4"<<endl;
+    }
+
+}
+
+void TreeNode::recursive_gen_code(ostream &out,TreeNode *node){
+    if(node->nodeType==NODE_OP){
+        expr_gen_code(out,node);
+    }else if(node->nodeType==NODE_STMT){
+        stmt_gen_code(out,node);
+    }
+}
+
+void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
+    if(node->nodeType==NODE_STMT){
+        switch (node->stmtType)
+        {
+        case STMT_WHILE:
+        {
+            
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    
+}
+
+void TreeNode::expr_gen_code(ostream &out,TreeNode *node){
+    TreeNode *e1=node->child;
+    TreeNode *e2=node->child->sibling;
+    switch (node->opType)
+    {
+    case OP_ADD:
+    {
+        out << "\tmovl $";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" ;              //待更新
+		else if (e1->nodeType == NODE_CONST)
+			out<<"something";//待更新
+		else out << "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+		out << "\taddl $";
+		if (e2->nodeType == NODE_VAR)
+			out << "_" ;                //待更新
+		else if (e2->nodeType == NODE_CONST)
+			out << "something";       //待更新
+		else out << "t" << e2->temp_var;
+		out << ", %eax" << endl;
+		out << "\tmovl %eax, $t" << node->temp_var << endl;
+        break;
+    }
+    
+    
+    default:
+        break;
+    }
+}
+
+void TreeNode::get_label(TreeNode *node){
+    node->label.begin_label="_start";
+    recursive_get_label(node);
+}
+
+void TreeNode::gen_code(ostream &out,TreeNode *node){
+    gen_header(out);
+    
+    TreeNode *p=node->child;
+    if(p->nodeType==NODE_STMT&&p->stmtType==STMT_DECL)    //打印全局变量的声明
+        gen_decl(out,p);
+
+    out<<endl<<endl<<"# your asm code here" << endl;
+    out << "\t.text" << endl;
+    out << "\t.globl _start" << endl;
+    recursive_gen_code(out, node);                        //打印
+    if(node->label.next_label!="")
+        out<<node->label.next_label<<":"<<endl;
+    out<<"\tret"<<endl;
+}

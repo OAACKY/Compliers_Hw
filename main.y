@@ -145,6 +145,15 @@ instruction
     | scanf SEMICOLON {$$=$1;}
     ;
 
+IDassign_list
+    : IDassign_list COMMA ID ASSIGN expr {
+
+    }
+    | COMMA ID ASSIGN expr {
+
+    }
+    ;
+
 IDlist
     : ID {
         TreeNode *node=new TreeNode(NODE_STMT);

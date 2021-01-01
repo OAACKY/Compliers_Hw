@@ -9,7 +9,7 @@
 %start program
 
 %token BREAK CONTINUE RETURN
-%token ID INTEGER CONSTRING
+%token ID INTEGER CONSTRING CONSCHAR
 %token IF ELSE WHILE FOR
 %token INT VOID CHAR
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
@@ -134,7 +134,7 @@ instruction
         node->addChild($3);
         $$=node;
     }
-    | type IDlist SEMICOLON {
+    | type IDlist SEMICOLON {   
         TreeNode *node=new TreeNode(NODE_STMT);
         node->stmtType=STMT_DECL;
         node->addChild($1);
@@ -144,6 +144,7 @@ instruction
     | printf SEMICOLON {$$=$1;}
     | scanf SEMICOLON {$$=$1;}
     ;
+
 IDlist
     : ID {
         TreeNode *node=new TreeNode(NODE_STMT);
@@ -265,6 +266,7 @@ expr
     : ID {$$=$1;}
     | INTEGER {$$=$1;}
     | CONSTRING {$$=$1;}
+    | CONSCHAR {$$=$1;}
     | LPAREN expr RPAREN {$$=$2;}
     | ID exassign expr {
         TreeNode *node=new TreeNode(NODE_STMT);

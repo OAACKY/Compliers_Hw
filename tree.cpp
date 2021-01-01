@@ -3,6 +3,7 @@
 map<string,map<int,int> > int_scope;
 map<string,map<int,char> > char_scope;
 
+symbol_table *beginTable=new symbol_table("globl");          //开始时创建一个全局的符号表，符号表是树状的。
 
 void TreeNode::addChild(TreeNode *temp){
     if(this->child==nullptr)
@@ -28,7 +29,7 @@ void TreeNode::addSibling(TreeNode *temp){
 int tempNodeId=0;
 
 void dfs(TreeNode *node){
-    while(node!=nullptr){
+    while(node!=nullptr){      
         node->nodeID=tempNodeId++;
         dfs(node->child);
         node=node->sibling;
@@ -37,8 +38,9 @@ void dfs(TreeNode *node){
 
 void TreeNode::genNodeId(){
     dfs(this);
-    cout<<tempNodeId<<endl;
-    symbolTable(this);
+    //cout<<tempNodeId<<endl;    输出节点数
+    symbolTable(this,beginTable);
+    //Type_Check(this,beginTable);  符号表和类型检查合并
 }
 
 void printDfs(TreeNode *node){
@@ -91,13 +93,14 @@ void TreeNode::nodeTypeInfo(){
         cout<<this->int_val<<" ";
         else if(this->consType==CONS_STRING)
         cout<<this->str_val<<" ";
-        break;
+        else if(this->consType==CONS_CHAR)
+        cout<<this->char_val<<" ";
         break;
     case NODE_OP:
         cout<<opTypeToString(this->opType)<<" ";
         break;
     case NODE_VAR:
-        cout<<"variable varname: "<<this->var_name;
+        cout<<"variable varname: "<<this->var_name<<" type: "<<varTypeToString(this->varType)<<" ";
         break;
     case NODE_TYPE:
         cout<<"type type: "<<varTypeToString(this->varType)<<" ";
@@ -261,29 +264,120 @@ TreeNode::TreeNode(NodeType mytype){
     this->nodeType=mytype;
 }
 
-void TreeNode::symbolTable(TreeNode *node){
-    int tempScope=0;
+void TreeNode::symbolTable(TreeNode *node,symbol_table *table){
+    //symbol_table *tempTable=beginTable;
     TreeNode *temp=node->child;
     while(temp!=nullptr){
+        if(temp->nodeType==NODE_FUNC||(temp->nodeType==NODE_STMT&&(temp->stmtType==STMT_IF||temp->stmtType==STMT_WHILE))){
+            symbol_table *newChild = new symbol_table(to_string(temp->nodeID));   //表名为stmt或fun在语法树中的节点标号
+            table->addchild(newChild);
+            symbolTable(temp,newChild);
+            temp=temp->sibling;
+            continue;
+        }
         if(temp->nodeType==NODE_STMT&&temp->stmtType==STMT_DECL){
-            switch (temp->child->varType)
-            {
-            case VAR_INTEGER:
-                int_scope[temp->sibling->var_name][node->nodeID]=0;
-                break;
-            case VAR_CHAR:
-                char_scope[temp->sibling->var_name][node->nodeID]='0';
-                break;
-            default:
-                break;
+            if(temp->child->sibling->nodeType==NODE_VAR){
+                //如果是单个变量的声明
+                map<string,symbol_entry *>::iterator it;
+                it = table->table_content.find(temp->child->sibling->var_name);
+                if(it==table->table_content.end()){
+                    symbol_entry * entry = new symbol_entry(temp->child->sibling->nodeID,true,temp->child->varType);
+                    table->table_content[temp->child->sibling->var_name]=entry;
+                    temp->child->sibling->belong_table=table;
+                }else{
+                    cout<<"redifine error!"<<temp->child->sibling->var_name<<endl;
+                }
+            }else{
+                //如果是idlist的声明
+                TreeNode *tempIdlist=temp->child->sibling->child;
+                while(tempIdlist!=nullptr){
+                    map<string,symbol_entry *>::iterator it;
+                    it = table->table_content.find(tempIdlist->var_name);
+                    if(it==table->table_content.end()){
+                        symbol_entry * entry = new symbol_entry(tempIdlist->nodeID,true,temp->child->varType);
+                        table->table_content[tempIdlist->var_name]=entry;
+                        tempIdlist->belong_table=table;
+                        //cout<<"已存入 "<<tempIdlist->var_name<<endl;
+                    }else{
+                        cout<<"redifine error!"<<tempIdlist->var_name<<endl;
+                    }
+                    tempIdlist=tempIdlist->sibling;
+                }
+            }
+            temp=temp->sibling;    //跳过这个子树
+            continue;
+        }
+        if(temp->nodeType==NODE_VAR){
+            if(!table->checkExist(table,temp->var_name)){
+                cout<<"nodifine error!"<<temp->var_name<<endl;
             }
         }
-        symbolTable(temp);
+        if(temp->nodeType==NODE_OP){
+            if(temp->opType>=OP_ADD&&temp->opType<=OP_MOD){              //对所有运算符
+                if(temp->child->nodeType!=NODE_OP){                      //左儿子不为运算符
+                    if(temp->child->nodeType==NODE_CONST&&temp->child->consType!=CONS_INTEGER){
+                        cout<<"Type Check Error!"<<endl;
+                        return;
+                    }
+                    if(temp->child->nodeType==NODE_VAR&&temp->child->varType!=VAR_INTEGER){
+                        cout<<"Type Check Error!"<<endl;
+                        return;
+                    }
+                }
+                if(temp->child->sibling->nodeType!=NODE_OP){            //右儿子不为运算符
+                    if(temp->child->sibling->nodeType==NODE_CONST&&temp->child->sibling->consType!=CONS_INTEGER){
+                        cout<<"Type Check Error!"<<endl;
+                        return;
+                    }
+                    if(temp->child->sibling->nodeType==NODE_VAR&&table->table_content[temp->child->sibling->var_name]->entry_type!=VAR_INTEGER){
+                        cout<<"Type Check Error!"<<endl;
+                        return;
+                        //temp->child->sibling->belong_table->table_content[node->child->sibling->var_name]->entry_type
+                    }
+                    //cout<<"检查结束"<<node->child->sibling->varType<<endl;
+                }
+            }
+        }
+        symbolTable(temp,table);
         temp=temp->sibling;
     }
 
 }
 
-void TreeNode::Type_Check(TreeNode *node){
-    
-}
+// void TreeNode::Type_Check(TreeNode *node,symbol_table *table){
+//     while(node!=nullptr){
+//         if(node->nodeType==NODE_FUNC||(node->nodeType==NODE_STMT&&(node->stmtType==STMT_IF||node->stmtType==STMT_WHILE))){
+//             Type_Check(node,table->child);
+//             node=node->sibling;
+//             continue;
+//         }
+//         if(node->nodeType==NODE_OP){
+//             if(node->opType>=OP_ADD&&node->opType<=OP_MOD){              //对所有运算符
+//                 if(node->child->nodeType!=NODE_OP){                      //左儿子不为运算符
+//                     if(node->child->nodeType==NODE_CONST&&node->child->consType!=CONS_INTEGER){
+//                         cout<<"Type Check Error!"<<endl;
+//                         return;
+//                     }
+//                     if(node->child->nodeType==NODE_VAR&&node->child->varType!=VAR_INTEGER){
+//                         cout<<"Type Check Error!"<<endl;
+//                         return;
+//                     }
+//                 }
+//                 if(node->child->sibling->nodeType!=NODE_OP){            //右儿子不为运算符
+//                     if(node->child->sibling->nodeType==NODE_CONST&&node->child->sibling->consType!=CONS_INTEGER){
+//                         cout<<"Type Check Error!"<<endl;
+//                         return;
+//                     }
+//                     if(node->child->sibling->nodeType==NODE_VAR&&node->child->sibling->varType!=VAR_INTEGER){
+//                         cout<<"Type Check Error!"<<endl;
+//                         return;
+//                         //node->child->sibling->belong_table->table_content[node->child->sibling->var_name]->entry_type
+//                     }
+//                     //cout<<"检查结束"<<node->child->sibling->varType<<endl;
+//                 }
+//             }
+//         }
+//     Type_Check(node->child,table);
+//     node=node->sibling;
+//     }
+// }

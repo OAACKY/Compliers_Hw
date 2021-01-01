@@ -17,6 +17,7 @@ INTEGER [0-9]+
 ID [[:alpha:]_][[:alpha:][:digit:]_]*
 
 CONSTRING \"([^\"]*)\"
+CONSCHAR \'[^\']\'
 
 EOL (\r\n|\n)
 WHITE [\t ]
@@ -108,6 +109,14 @@ WHITE [\t ]
     yylval = node;
     node->consType = CONS_STRING;
     return CONSTRING;
+}
+
+{CONSCHAR} {
+    TreeNode *node = new TreeNode(NODE_CONST);
+    node->char_val=yytext[1];
+    yylval=node;
+    node->consType=CONS_CHAR;
+    return CONSCHAR;
 }
 
 

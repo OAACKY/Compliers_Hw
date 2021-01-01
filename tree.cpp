@@ -5,6 +5,10 @@ map<string,map<int,char> > char_scope;
 
 symbol_table *beginTable=new symbol_table("globl");          //开始时创建一个全局的符号表，符号表是树状的。
 
+int TreeNode::node_seq=0;
+int TreeNode::temp_var_seq=-1;
+int TreeNode::label_seq=0;
+
 void TreeNode::addChild(TreeNode *temp){
     if(this->child==nullptr)
         this->child=temp;
@@ -31,6 +35,9 @@ int tempNodeId=0;
 void dfs(TreeNode *node){
     while(node!=nullptr){      
         node->nodeID=tempNodeId++;
+        if(node->nodeType==NODE_OP)
+            if(node->opType>=OP_ADD&&node->opType<=OP_MOD)
+                TreeNode::temp_var_seq++;
         dfs(node->child);
         node=node->sibling;
     }
@@ -97,7 +104,7 @@ void TreeNode::nodeTypeInfo(){
         cout<<this->char_val<<" ";
         break;
     case NODE_OP:
-        cout<<opTypeToString(this->opType)<<" ";
+        cout<<opTypeToString(this->opType)<<" "<<"temp_var "<<this->temp_var<<" ";
         break;
     case NODE_VAR:
         cout<<"variable varname: "<<this->var_name<<" type: "<<varTypeToString(this->varType)<<" ";
@@ -310,10 +317,13 @@ void TreeNode::symbolTable(TreeNode *node,symbol_table *table){
         if(temp->nodeType==NODE_VAR){
             if(!table->checkExist(table,temp->var_name)){
                 cout<<"nodifine error!"<<temp->var_name<<endl;
+            }else{
+                temp->belong_table=table->findtable(table,temp->var_name); //为出现的每个变量都设置归属符号表
             }
         }
         if(temp->nodeType==NODE_OP){
             if(temp->opType>=OP_ADD&&temp->opType<=OP_MOD){              //对所有运算符
+                get_temp_var(temp);
                 if(temp->child->nodeType!=NODE_OP){                      //左儿子不为运算符
                     if(temp->child->nodeType==NODE_CONST&&temp->child->consType!=CONS_INTEGER){
                         cout<<"Type Check Error!"<<endl;
@@ -538,7 +548,7 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
         {
         case STMT_WHILE:
         {
-            
+
             break;
         }
         default:
@@ -588,7 +598,7 @@ void TreeNode::gen_code(ostream &out,TreeNode *node){
     gen_header(out);
     
     TreeNode *p=node->child;
-    if(p->nodeType==NODE_STMT&&p->stmtType==STMT_DECL)    //打印全局变量的声明
+    if(p->nodeType==NODE_STMT&&p->stmtType==STMT_DECL)    //打印变量的声明
         gen_decl(out,p);
 
     out<<endl<<endl<<"# your asm code here" << endl;

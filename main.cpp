@@ -29,12 +29,12 @@ int main(int argc, char *argv[])
     yyparse();
     if(root != NULL) {
         root->genNodeId();
-        //root->printAST();
+        root->printAST();
     }
     //root->Type_Check(root);类型检查放在生成节点标号之后
-
-    root->get_label(root);
-    root->gen_code(*asm_out,root);
+    cout<<root->temp_var_seq<<endl;
+    //root->get_label(root);
+    //root->gen_code(*asm_out,root);
 
     return 0;
 }

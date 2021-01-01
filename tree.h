@@ -65,9 +65,9 @@ public:
     static string sTypeToString(StmtType type);
 
     TreeNode(NodeType mytype);
-    static int node_seq=0;       //对所有node均为相同的值
-    static int temp_var_seq=0;
-    static int label_seq=0;
+    static int node_seq;       //对所有node均为相同的值
+    static int temp_var_seq;
+    static int label_seq;
     Label label;     //每个语法树节点的标签
 
     int temp_var;     //变量的标号

@@ -78,6 +78,7 @@ public:
     void stmt_get_label(TreeNode *);
     void expr_get_label(TreeNode *);
     void gen_header(ostream &out);
+    void dfs_gen_decl(ostream &out,TreeNode *);
     void gen_decl(ostream &out,TreeNode *);
     void recursive_gen_code(ostream &out,TreeNode *);
     void stmt_gen_code(ostream &out,TreeNode *);

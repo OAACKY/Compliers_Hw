@@ -419,7 +419,7 @@ string TreeNode::new_label(){
 }
 
 void TreeNode::recursive_get_label(TreeNode *node){
-    if(node->nodeType==NODE_STMT)
+    if(node->nodeType==NODE_STMT||node->nodeType==NODE_PROG||node->nodeType==NODE_FUNC)
         stmt_get_label(node);
     else if(node->nodeType==NODE_OP)
         expr_get_label(node);
@@ -522,28 +522,39 @@ void TreeNode::gen_header(ostream &out){
 
 }
 
+void TreeNode::dfs_gen_decl(ostream &out,TreeNode *node){
+    while(node!=nullptr){
+        if(node->nodeType==NODE_STMT&&node->stmtType==STMT_DECL){
+            if(node->child->sibling->nodeType!=NODE_STMT)
+            {
+                TreeNode *p=node->child->sibling;
+                if(p->varType==VAR_INTEGER){
+                    out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<endl;       
+                    out<<"\t.zero\t4"<<endl;
+                    out<<"\t.align\t4"<<endl;
+                }
+            }else{
+            for(TreeNode *p=node->child->sibling->child;p;p=p->sibling){
+                if(p->varType==VAR_INTEGER){
+                    out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<endl;       
+                    out<<"\t.zero\t4"<<endl;
+                    out<<"\t.align\t4"<<endl;
+                }
+            }
+            }
+            node=node->sibling;
+            continue;
+        }
+        dfs_gen_decl(out,node->child);
+        node=node->sibling;
+    }
+
+}
+
 void TreeNode::gen_decl(ostream &out,TreeNode *node){
     out<<endl<< "# define your veriables and temp veriables here" << endl;
     out << "\t.bss" << endl;
-    for(;node->stmtType==STMT_DECL;node=node->sibling){
-        if(node->child->sibling->nodeType!=NODE_STMT)
-        {
-            TreeNode *p=node->child->sibling;
-            if(p->varType==VAR_INTEGER){
-                out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<endl;       
-                out<<"\t.zero\t4"<<endl;
-                out<<"\t.align\t4"<<endl;
-            }
-        }else{
-        for(TreeNode *p=node->child->sibling->child;p;p=p->sibling){
-            if(p->varType==VAR_INTEGER){
-                out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<endl;       
-                out<<"\t.zero\t4"<<endl;
-                out<<"\t.align\t4"<<endl;
-            }
-        }
-        }
-    }
+    dfs_gen_decl(out,node);
 
     for(int i=0;i<temp_var_seq;i++){
         out<<"t"<<i<<":"<<endl;
@@ -556,7 +567,7 @@ void TreeNode::gen_decl(ostream &out,TreeNode *node){
 void TreeNode::recursive_gen_code(ostream &out,TreeNode *node){
     if(node->nodeType==NODE_OP){
         expr_gen_code(out,node);
-    }else if(node->nodeType==NODE_STMT){
+    }else if(node->nodeType==NODE_STMT||node->nodeType==NODE_PROG||node->nodeType==NODE_FUNC){
         stmt_gen_code(out,node);
     }
 }
@@ -597,6 +608,10 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
         default:
             break;
         }
+    }else if(node->nodeType==NODE_PROG){
+        recursive_gen_code(out,node->child);
+    }else if(node->nodeType==NODE_FUNC){
+
     }
     
 }
@@ -695,8 +710,8 @@ void TreeNode::gen_code(ostream &out,TreeNode *node){
     out<<endl<<endl<<"# your asm code here" << endl;
     out << "\t.text" << endl;
     out << "\t.globl _start" << endl;
-    recursive_gen_code(out, node);                        //打印
-    if(node->label.next_label!="")
-        out<<node->label.next_label<<":"<<endl;
-    out<<"\tret"<<endl;
+    // recursive_gen_code(out, node);                        //打印
+    // if(node->label.next_label!="")
+    //     out<<node->label.next_label<<":"<<endl;
+    // out<<"\tret"<<endl;
 }

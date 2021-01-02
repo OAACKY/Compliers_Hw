@@ -457,7 +457,16 @@ void TreeNode::stmt_get_label(TreeNode *node){
         recursive_get_label(s);
         break;
     }
+    case STMT_IF:
+    {
 
+        break;
+    }
+    case STMT_FOR:
+    {
+
+        break;
+    }
 
     default:
         break;
@@ -517,13 +526,23 @@ void TreeNode::gen_decl(ostream &out,TreeNode *node){
     out<<endl<< "# define your veriables and temp veriables here" << endl;
     out << "\t.bss" << endl;
     for(;node->stmtType==STMT_DECL;node=node->sibling){
-        for(TreeNode *p=node->child;p;p=p->sibling){
-            if(p->varType==VAR_INTEGER)
-                out<<"_"<<endl;         //待补充
+        if(node->child->sibling->nodeType!=NODE_STMT)
+        {
+            TreeNode *p=node->child->sibling;
+            if(p->varType==VAR_INTEGER){
+                out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<endl;       
                 out<<"\t.zero\t4"<<endl;
                 out<<"\t.align\t4"<<endl;
+            }
+        }else{
+        for(TreeNode *p=node->child->sibling->child;p;p=p->sibling){
+            if(p->varType==VAR_INTEGER){
+                out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<endl;       
+                out<<"\t.zero\t4"<<endl;
+                out<<"\t.align\t4"<<endl;
+            }
         }
-
+        }
     }
 
     for(int i=0;i<temp_var_seq;i++){
@@ -548,6 +567,30 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
         {
         case STMT_WHILE:
         {
+            if(node->label.begin_label!="")
+                out<<node->label.begin_label<<":"<<endl;
+            recursive_gen_code(out,node->child);
+            recursive_gen_code(out,node->child->sibling);
+            out<<"\tjmp"<<node->label.begin_label<<endl;
+            break;
+        }
+        case STMT_IF:
+        {
+
+            break;
+        }
+        case STMT_PRINTF:
+        {
+
+            break;
+        }
+        case STMT_SCANF:
+        {
+
+            break;
+        }
+        case STMT_FOR:
+        {
 
             break;
         }
@@ -567,23 +610,71 @@ void TreeNode::expr_gen_code(ostream &out,TreeNode *node){
     {
         out << "\tmovl $";
 		if (e1->nodeType == NODE_VAR)
-			out << "_" ;              //待更新
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;              //待更新
 		else if (e1->nodeType == NODE_CONST)
-			out<<"something";//待更新
+			out<<e1->int_val;
 		else out << "t" << e1->temp_var;
 		out << ", %eax" <<endl;
 		out << "\taddl $";
 		if (e2->nodeType == NODE_VAR)
-			out << "_" ;                //待更新
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;                //待更新
 		else if (e2->nodeType == NODE_CONST)
-			out << "something";       //待更新
+			out <<e2->int_val;    
 		else out << "t" << e2->temp_var;
 		out << ", %eax" << endl;
 		out << "\tmovl %eax, $t" << node->temp_var << endl;
         break;
     }
-    
-    
+    case OP_SUB:
+    {
+
+        break;
+    }
+    case OP_MUL:
+    {
+
+        break;
+    }
+    case OP_DIV:
+    {
+
+        break;
+    }
+    case OP_MOD:
+    {
+
+        break;
+    }
+    case OP_EQUAL:
+    {
+
+        break;
+    }
+    case OP_NEQUAL:
+    {
+
+        break;
+    }
+    case OP_MT:
+    {
+
+        break;
+    }
+    case OP_MTOE:
+    {
+
+        break;
+    }
+    case OP_LT:
+    {
+
+        break;
+    }
+    case OP_LTOE:
+    {
+
+        break;
+    }
     default:
         break;
     }
@@ -598,8 +689,8 @@ void TreeNode::gen_code(ostream &out,TreeNode *node){
     gen_header(out);
     
     TreeNode *p=node->child;
-    if(p->nodeType==NODE_STMT&&p->stmtType==STMT_DECL)    //打印变量的声明
-        gen_decl(out,p);
+    //if(p->nodeType==NODE_STMT&&p->stmtType==STMT_DECL)    //打印变量的声明
+    gen_decl(out,p);
 
     out<<endl<<endl<<"# your asm code here" << endl;
     out << "\t.text" << endl;

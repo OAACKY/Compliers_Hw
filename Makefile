@@ -1,4 +1,4 @@
-.PHONY: all clean main run test debug
+.PHONY: all clean main run test debug standard
 all: run
 main.tab.cc: main.y
 	bison -o main.tab.cc -v main.y
@@ -15,3 +15,8 @@ test:main
 	done
 clean:
 	rm -f *.output *.yy.* *.tab.* *.out test/*.res
+standard:
+	gcc ./test/test.c -E -m32 -o ./test/main.i
+	gcc -O0 -o ./test/main.S -S -m32 -masm=att ./test/main.i
+out:
+	gcc -o ./test/out ./test/out.s

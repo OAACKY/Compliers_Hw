@@ -1,5 +1,8 @@
 test/*.res
 test/*.output
+test/*.i
+test/*.S
+test/*.out
 test/test.c
 bin/*
 /*.cpp

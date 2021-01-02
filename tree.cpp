@@ -6,8 +6,10 @@ map<string,map<int,char> > char_scope;
 symbol_table *beginTable=new symbol_table("globl");          //开始时创建一个全局的符号表，符号表是树状的。
 
 int TreeNode::node_seq=0;
-int TreeNode::temp_var_seq=-1;
+int TreeNode::temp_var_seq=0;
 int TreeNode::label_seq=0;
+
+int cons_num = 0;
 
 void TreeNode::addChild(TreeNode *temp){
     if(this->child==nullptr)
@@ -35,9 +37,9 @@ int tempNodeId=0;
 void dfs(TreeNode *node){
     while(node!=nullptr){      
         node->nodeID=tempNodeId++;
-        if(node->nodeType==NODE_OP)
-            if(node->opType>=OP_ADD&&node->opType<=OP_MOD)
-                TreeNode::temp_var_seq++;
+        // if(node->nodeType==NODE_OP)
+        //     if(node->opType>=OP_ADD&&node->opType<=OP_MOD)
+        //         TreeNode::temp_var_seq++;
         dfs(node->child);
         node=node->sibling;
     }
@@ -107,7 +109,7 @@ void TreeNode::nodeTypeInfo(){
         cout<<opTypeToString(this->opType)<<" "<<"temp_var "<<this->temp_var<<" ";
         break;
     case NODE_VAR:
-        cout<<"variable varname: "<<this->var_name<<" type: "<<varTypeToString(this->varType)<<" ";
+        cout<<"variable varname: "<<this->var_name<<" type: "<<varTypeToString(this->belong_table->findtype(this->belong_table,this->var_name))<<" ";
         break;
     case NODE_TYPE:
         cout<<"type type: "<<varTypeToString(this->varType)<<" ";
@@ -402,10 +404,10 @@ void TreeNode::get_temp_var(TreeNode *node){
     TreeNode *arg1=node->child;
     TreeNode *arg2=node->child->sibling;
 
-    if(arg1->nodeType==NODE_OP)
-        temp_var_seq--;
-    if(arg2&&arg2->nodeType==NODE_OP)
-        temp_var_seq--;
+    // if(arg1->nodeType==NODE_OP)
+    //     temp_var_seq--;
+    // if(arg2&&arg2->nodeType==NODE_OP)
+    //     temp_var_seq--;
     node->temp_var=temp_var_seq;
     temp_var_seq++;
 
@@ -525,20 +527,26 @@ void TreeNode::gen_header(ostream &out){
 void TreeNode::dfs_gen_decl(ostream &out,TreeNode *node){
     while(node!=nullptr){
         if(node->nodeType==NODE_STMT&&node->stmtType==STMT_DECL){
-            if(node->child->sibling->nodeType!=NODE_STMT)
+            if(node->child->sibling->nodeType!=NODE_STMT)      //对于单个变量类型声明
             {
                 TreeNode *p=node->child->sibling;
-                if(p->varType==VAR_INTEGER){
-                    out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<endl;       
+                if(node->child->varType==VAR_INTEGER){
+                    out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<":"<<endl;       
                     out<<"\t.zero\t4"<<endl;
                     out<<"\t.align\t4"<<endl;
+                }else{
+                    out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<":"<<endl;       
+                    out<<"\t.zero\t1"<<endl;
                 }
-            }else{
+            }else{                                             //对于idlist声明
             for(TreeNode *p=node->child->sibling->child;p;p=p->sibling){
-                if(p->varType==VAR_INTEGER){
-                    out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<endl;       
+                if(node->child->varType==VAR_INTEGER){
+                    out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<":"<<endl;       
                     out<<"\t.zero\t4"<<endl;
                     out<<"\t.align\t4"<<endl;
+                }else{
+                    out<<"_"<<p->belong_table->table_name<<"_"<<p->var_name<<":"<<endl;       
+                    out<<"\t.zero\t1"<<endl;
                 }
             }
             }
@@ -546,6 +554,19 @@ void TreeNode::dfs_gen_decl(ostream &out,TreeNode *node){
             continue;
         }
         dfs_gen_decl(out,node->child);
+        node=node->sibling;
+    }
+
+}
+
+void TreeNode::dfs_gen_cons(ostream &out,TreeNode *node){
+    while(node!=nullptr){
+        if(node->nodeType==NODE_CONST&&node->consType==CONS_STRING)
+        {     node->temp_cons=cons_num++;
+              out<<".LC"<<node->temp_cons<<":"<<endl;
+              out<<"\t.string "<<"\""<<node->str_val<<"\""<<endl;
+        }
+        dfs_gen_cons(out,node->child);
         node=node->sibling;
     }
 
@@ -561,10 +582,13 @@ void TreeNode::gen_decl(ostream &out,TreeNode *node){
         out<<"\t.zero\t4"<<endl;
         out<<"\t.align\t4"<<endl;
     }
-
+    out<<"\t.section\t.rodata"<<endl;
+    dfs_gen_cons(out,node);
 }
 
 void TreeNode::recursive_gen_code(ostream &out,TreeNode *node){
+    if(node==nullptr)
+        return;
     if(node->nodeType==NODE_OP){
         expr_gen_code(out,node);
     }else if(node->nodeType==NODE_STMT||node->nodeType==NODE_PROG||node->nodeType==NODE_FUNC){
@@ -605,13 +629,54 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
 
             break;
         }
+        case STMT_ASSIGN:
+        {
+            if(node->child->sibling->nodeType==NODE_VAR||node->child->sibling->nodeType==NODE_CONST){
+                if(node->child->sibling->nodeType==NODE_VAR&&node->child->sibling->varType==VAR_INTEGER){
+                    out<<"\tmovl "<<"_" <<node->child->sibling->belong_table->table_name<<"_"<<node->child->sibling->var_name;
+                    out<<", %edx"<<endl;
+                    out<<"\tmovl "<<"%edx";
+                    out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
+                }else if(node->child->sibling->nodeType==NODE_VAR&&node->child->sibling->varType==VAR_CHAR){
+                    out<<"\tmovzbl "<<"_" <<node->child->sibling->belong_table->table_name<<"_"<<node->child->sibling->var_name;
+                    out<<", %edx"<<endl;
+                    out<<"\tmovb "<<"%dl";
+                    out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
+                }else if(node->child->sibling->nodeType==NODE_CONST&&node->child->sibling->consType==CONS_INTEGER){
+                    out<<"\tmovl "<<"$"<<node->child->sibling->int_val;
+                    out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
+                }else{
+                    out<<"\tmovb "<<"$"<<node->child->sibling->char_val;
+                    out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
+                }
+            }else if(node->child->sibling->nodeType==NODE_OP){
+                expr_gen_code(out,node->child->sibling);             //丢给expr递归处理
+                out<<"\tmovl "<<"t"<<node->child->sibling->temp_var;
+                out<<" ,%edx"<<endl;
+                out<<"\tmovl "<<"%edx";
+                out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
+            }else if(node->child->sibling->nodeType==NODE_STMT){
+                    //对于a=b=c 连等情况 则递归，从右向左处理。
+                stmt_gen_code(out,node->child->sibling);
+                //可能会出现多重嵌套，需要考虑。。。
+            }
+            recursive_gen_code(out,node->sibling);
+            break;
+        }
+        case STMT_DECL:
+        {
+            //待补充
+            recursive_gen_code(out,node->sibling);
+            break;
+        }
         default:
             break;
         }
     }else if(node->nodeType==NODE_PROG){
         recursive_gen_code(out,node->child);
     }else if(node->nodeType==NODE_FUNC){
-
+        recursive_gen_code(out,node->child->sibling);
+        recursive_gen_code(out,node->sibling);          //如果有多个函数，就生成下一个函数的代码段
     }
     
 }
@@ -619,20 +684,24 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
 void TreeNode::expr_gen_code(ostream &out,TreeNode *node){
     TreeNode *e1=node->child;
     TreeNode *e2=node->child->sibling;
+    if(e1->nodeType==NODE_OP)
+        expr_gen_code(out,e1);
+    if(e2->nodeType==NODE_OP)
+        expr_gen_code(out,e2);
     switch (node->opType)
     {
     case OP_ADD:
     {
         out << "\tmovl $";
 		if (e1->nodeType == NODE_VAR)
-			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;              //待更新
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
 		else if (e1->nodeType == NODE_CONST)
 			out<<e1->int_val;
 		else out << "t" << e1->temp_var;
 		out << ", %eax" <<endl;
 		out << "\taddl $";
 		if (e2->nodeType == NODE_VAR)
-			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;                //待更新
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;               
 		else if (e2->nodeType == NODE_CONST)
 			out <<e2->int_val;    
 		else out << "t" << e2->temp_var;
@@ -642,22 +711,76 @@ void TreeNode::expr_gen_code(ostream &out,TreeNode *node){
     }
     case OP_SUB:
     {
-
+        out << "\tmovl $";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<e1->int_val;
+		else out << "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+		out << "\tsubl $";
+		if (e2->nodeType == NODE_VAR)
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+		else if (e2->nodeType == NODE_CONST)
+			out <<e2->int_val;    
+		else out << "t" << e2->temp_var;
+		out << ", %eax" << endl;
+		out << "\tmovl %eax, $t" << node->temp_var << endl;
         break;
     }
     case OP_MUL:
     {
-
+        out << "\tmovl $";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<e1->int_val;
+		else out << "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+		out << "\timull $";
+		if (e2->nodeType == NODE_VAR)
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+		else if (e2->nodeType == NODE_CONST)
+			out <<e2->int_val;    
+		else out << "t" << e2->temp_var;
+		out << ", %eax" << endl;
+		out << "\tmovl %eax, $t" << node->temp_var << endl;
         break;
     }
     case OP_DIV:
     {
-
+        out << "\tmovl $";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<e1->int_val;
+		else out << "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+		out << "\tidivl $";                   //对于除法只有单目
+		if (e2->nodeType == NODE_VAR)
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+		else if (e2->nodeType == NODE_CONST)
+			out <<e2->int_val;    
+		else out << "t" << e2->temp_var;
+		out << "\tmovl %eax, $t" << node->temp_var << endl;
         break;
     }
     case OP_MOD:
     {
-
+        out << "\tmovl $";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<e1->int_val;
+		else out << "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+		out << "\tidivl $";                   //对于取模取的是除法的余数
+		if (e2->nodeType == NODE_VAR)
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+		else if (e2->nodeType == NODE_CONST)
+			out <<e2->int_val;    
+		else out << "t" << e2->temp_var;
+		out << "\tmovl %edx, $t" << node->temp_var << endl;
         break;
     }
     case OP_EQUAL:
@@ -710,8 +833,10 @@ void TreeNode::gen_code(ostream &out,TreeNode *node){
     out<<endl<<endl<<"# your asm code here" << endl;
     out << "\t.text" << endl;
     out << "\t.globl _start" << endl;
-    // recursive_gen_code(out, node);                        //打印
-    // if(node->label.next_label!="")
-    //     out<<node->label.next_label<<":"<<endl;
-    // out<<"\tret"<<endl;
+    recursive_gen_code(out, node);                        //打印
+    //out<<"到达这里了"<<endl;
+    out<<node->label.next_label<<":"<<endl;
+    out<<"\tret"<<endl;
+
+    out<<"	.section	.note.GNU-stack,"",@progbits"<<endl;
 }

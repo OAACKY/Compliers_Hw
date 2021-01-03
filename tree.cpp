@@ -509,6 +509,8 @@ void TreeNode::stmt_get_label(TreeNode *node){
 }
 
 void TreeNode::expr_get_label(TreeNode *node){
+    if(node==nullptr)
+        return;
     if(node->opType>OP_LTOE)
         return;
     TreeNode *e1= node->child;
@@ -516,15 +518,18 @@ void TreeNode::expr_get_label(TreeNode *node){
     switch (node->opType)
     {
     case OP_AND:
-        e1->label.true_label=new_label();
+        e1->label.true_label="noneed";
         e2->label.true_label=node->label.true_label;
         e1->label.false_label=e2->label.false_label=node->label.false_label;
         break;
     case OP_OR:
-
+        e1->label.true_label=e2->label.true_label=node->label.true_label;
+        e1->label.false_label="noneed";
+        e2->label.false_label=node->label.false_label;
         break;
     case OP_NOT:
-
+        e1->label.true_label=node->label.false_label;
+        e1->label.false_label=node->label.true_label;
         break;
     case OP_EQUAL:
 
@@ -547,6 +552,10 @@ void TreeNode::expr_get_label(TreeNode *node){
     default:
         break;
     }
+    if(e1)
+        expr_get_label(e1);
+    if(e2)
+        expr_get_label(e2);
 }
 
 void TreeNode::gen_header(ostream &out){
@@ -637,13 +646,25 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
         {
             if(node->label.begin_label!="")
                 out<<node->label.begin_label<<":"<<endl;
-            recursive_gen_code(out,node->child);
-            recursive_gen_code(out,node->child->sibling);
+            recursive_gen_code(out,node->child);            //先进行条件判断 若为假就跳出while端
+            out<<node->child->sibling->label.begin_label<<":"<<endl;
+            recursive_gen_code(out,node->child->sibling);   //若未跳出while段，则继续执行while内stmt端
             out<<"\tjmp"<<node->label.begin_label<<endl;
+            out<<node->label.next_label<<":"<<endl;
+            recursive_gen_code(out,node->sibling);
             break;
         }
         case STMT_IF:
-        { 
+        {  if(node->label.begin_label!="")
+                out<<node->label.begin_label<<":"<<endl;
+            recursive_gen_code(out,node->child);
+            out<<node->child->sibling->label.begin_label<<":"<<endl;
+            recursive_gen_code(out,node->child->sibling);
+            if(node->child->sibling->sibling)
+                out<<node->child->sibling->sibling->label.begin_label<<":"<<endl;
+            recursive_gen_code(out,node->child->sibling->sibling);
+            out<<node->label.next_label<<":"<<endl;
+            recursive_gen_code(out,node->sibling);
             break;
         }
         case STMT_PRINTF:
@@ -997,31 +1018,155 @@ void TreeNode::expr_gen_code(ostream &out,TreeNode *node){
     }
     case OP_EQUAL:
     {
+        out << "\tmovl ";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<"$"<<e1->int_val;
+		else out<< "t" << e1->temp_var;
+		out << ", %eax" <<endl;
 
+        out << "\tmovl ";
+		if (e2->nodeType == NODE_VAR)
+			out << "_" <<e2->belong_table->table_name<<"_"<<e2->var_name;             
+		else if (e2->nodeType == NODE_CONST)
+			out<<"$"<<e2->int_val;
+		else out<< "t" << e2->temp_var;
+		out << ", %ebx" <<endl;
+
+        out<<"\tcmpl %eax, %ebx"<<endl;
+        if(node->label.true_label=="noneed")
+            out<<"\tjnz "<<node->label.false_label<<endl;
+        else
+            out<<"\tjz "<<node->label.true_label<<endl;
+        
         break;
     }
     case OP_NEQUAL:
-    {
+    {   out << "\tmovl ";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<"$"<<e1->int_val;
+		else out<< "t" << e1->temp_var;
+		out << ", %eax" <<endl;
 
+        out << "\tmovl ";
+		if (e2->nodeType == NODE_VAR)
+			out << "_" <<e2->belong_table->table_name<<"_"<<e2->var_name;             
+		else if (e2->nodeType == NODE_CONST)
+			out<<"$"<<e2->int_val;
+		else out<< "t" << e2->temp_var;
+		out << ", %ebx" <<endl;
+
+        out<<"\tcmpl %eax, %ebx"<<endl;
+        if(node->label.true_label=="noneed")
+            out<<"\tjz "<<node->label.false_label<<endl;
+        else
+            out<<"\tjnz "<<node->label.true_label<<endl;
+        
         break;
     }
     case OP_MT:
-    {
+    {   out << "\tmovl ";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<"$"<<e1->int_val;
+		else out<< "t" << e1->temp_var;
+		out << ", %eax" <<endl;
 
+        out << "\tmovl ";
+		if (e2->nodeType == NODE_VAR)
+			out << "_" <<e2->belong_table->table_name<<"_"<<e2->var_name;             
+		else if (e2->nodeType == NODE_CONST)
+			out<<"$"<<e2->int_val;
+		else out<< "t" << e2->temp_var;
+		out << ", %ebx" <<endl;
+
+        out<<"\tcmpl %ebx, %eax"<<endl;
+        if(node->label.true_label=="noneed")
+            out<<"\tjle "<<node->label.false_label<<endl;
+        else
+            out<<"\tjg "<<node->label.true_label<<endl;
+        //待补充
         break;
     }
     case OP_MTOE:
-    {
+    {   out << "\tmovl ";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<"$"<<e1->int_val;
+		else out<< "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+
+        out << "\tmovl ";
+		if (e2->nodeType == NODE_VAR)
+			out << "_" <<e2->belong_table->table_name<<"_"<<e2->var_name;             
+		else if (e2->nodeType == NODE_CONST)
+			out<<"$"<<e2->int_val;
+		else out<< "t" << e2->temp_var;
+		out << ", %ebx" <<endl;
+
+        out<<"\tcmpl %ebx, %eax"<<endl;
+        if(node->label.true_label=="noneed")
+            out<<"\tjl "<<node->label.false_label<<endl;
+        else
+            out<<"\tjge "<<node->label.true_label<<endl;
+        //待补充
 
         break;
     }
     case OP_LT:
-    {
+    {   out << "\tmovl ";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<"$"<<e1->int_val;
+		else out<< "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+
+        out << "\tmovl ";
+		if (e2->nodeType == NODE_VAR)
+			out << "_" <<e2->belong_table->table_name<<"_"<<e2->var_name;             
+		else if (e2->nodeType == NODE_CONST)
+			out<<"$"<<e2->int_val;
+		else out<< "t" << e2->temp_var;
+		out << ", %ebx" <<endl;
+
+        out<<"\tcmpl %ebx, %eax"<<endl;
+        if(node->label.true_label=="noneed")
+            out<<"\tjge "<<node->label.false_label<<endl;
+        else
+            out<<"\tjl "<<node->label.true_label<<endl;
+        //待补充
 
         break;
     }
     case OP_LTOE:
-    {
+    {   out << "\tmovl ";
+		if (e1->nodeType == NODE_VAR)
+			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
+		else if (e1->nodeType == NODE_CONST)
+			out<<"$"<<e1->int_val;
+		else out<< "t" << e1->temp_var;
+		out << ", %eax" <<endl;
+
+        out << "\tmovl ";
+		if (e2->nodeType == NODE_VAR)
+			out << "_" <<e2->belong_table->table_name<<"_"<<e2->var_name;             
+		else if (e2->nodeType == NODE_CONST)
+			out<<"$"<<e2->int_val;
+		else out<< "t" << e2->temp_var;
+		out << ", %ebx" <<endl;
+
+        out<<"\tcmpl %ebx, %eax"<<endl;
+        if(node->label.true_label=="noneed")
+            out<<"\tjg "<<node->label.false_label<<endl;
+        else
+            out<<"\tjle "<<node->label.true_label<<endl;
+        //待补充
 
         break;
     }

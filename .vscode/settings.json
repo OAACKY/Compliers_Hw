@@ -3,6 +3,7 @@
         "iostream": "cpp",
         "map": "cpp",
         "random": "c",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "*.tcc": "cpp"
     }
 }

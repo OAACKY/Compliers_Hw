@@ -345,6 +345,7 @@ expr
     }
     | SUB expr %prec UMINUS {
         $2->int_val=-$2->int_val;
+        $2->isNeg=true;
         $$=$2;
     }
     | ADD expr %prec UADD {

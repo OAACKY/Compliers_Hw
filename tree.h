@@ -58,6 +58,8 @@ public:
     string str_val;
     string var_name;
 
+    bool isNeg;    //指明该节点是否为负值的标签
+
     static string loopTypeToString(LoopType type);
     static string consTypeToString(ConsType type);
     static string varTypeToString(VarType type);

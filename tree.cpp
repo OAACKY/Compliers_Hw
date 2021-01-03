@@ -11,6 +11,7 @@ int TreeNode::label_seq=0;
 
 int cons_num = 0;
 
+
 void TreeNode::addChild(TreeNode *temp){
     if(this->child==nullptr)
         this->child=temp;
@@ -293,6 +294,8 @@ void TreeNode::symbolTable(TreeNode *node,symbol_table *table){
                     symbol_entry * entry = new symbol_entry(temp->child->sibling->nodeID,true,temp->child->varType);
                     table->table_content[temp->child->sibling->var_name]=entry;
                     temp->child->sibling->belong_table=table;
+                    if(temp->child->sibling->sibling->nodeType==NODE_VAR)
+                        temp->child->sibling->sibling->belong_table=table->findtable(table,temp->child->sibling->sibling->var_name);
                 }else{
                     cout<<"redifine error!"<<temp->child->sibling->var_name<<endl;
                 }
@@ -321,6 +324,7 @@ void TreeNode::symbolTable(TreeNode *node,symbol_table *table){
                 cout<<"nodifine error!"<<temp->var_name<<endl;
             }else{
                 temp->belong_table=table->findtable(table,temp->var_name); //为出现的每个变量都设置归属符号表
+                temp->varType=table->findtype(table,temp->var_name);       //设置每个变量的符号
             }
         }
         if(temp->nodeType==NODE_OP){
@@ -414,13 +418,15 @@ void TreeNode::get_temp_var(TreeNode *node){
 }
 
 string TreeNode::new_label(){
-    string temp="@";
+    string temp=".L";
     temp+=to_string(label_seq);
     label_seq++;
     return temp;
 }
 
 void TreeNode::recursive_get_label(TreeNode *node){
+    if(node==nullptr)
+        return;
     if(node->nodeType==NODE_STMT||node->nodeType==NODE_PROG||node->nodeType==NODE_FUNC)
         stmt_get_label(node);
     else if(node->nodeType==NODE_OP)
@@ -461,7 +467,32 @@ void TreeNode::stmt_get_label(TreeNode *node){
     }
     case STMT_IF:
     {
+        TreeNode *e=node->child;
+        TreeNode *s1=node->sibling;
+        TreeNode *s2=node->sibling;
 
+        if(node->label.begin_label=="")
+            node->label.begin_label=new_label();
+
+        s1->label.begin_label=e->label.true_label=new_label();
+
+        if(node->label.next_label=="")
+            node->label.next_label=new_label();
+        s1->label.next_label=node->label.next_label;
+        
+        if(s2==nullptr){
+            e->label.false_label=node->label.next_label;
+        }
+        else{
+            e->label.false_label=s2->label.begin_label=new_label();
+            s2->label.next_label=node->label.next_label;
+        }
+
+        if(node->sibling)
+            node->sibling->label.begin_label=node->label.next_label;
+        recursive_get_label(e);
+        recursive_get_label(s1);
+        recursive_get_label(s2);
         break;
     }
     case STMT_FOR:
@@ -563,7 +594,7 @@ void TreeNode::dfs_gen_cons(ostream &out,TreeNode *node){
     while(node!=nullptr){
         if(node->nodeType==NODE_CONST&&node->consType==CONS_STRING)
         {     node->temp_cons=cons_num++;
-              out<<".LC"<<node->temp_cons<<":"<<endl;
+              out<<"LC"<<node->temp_cons<<":"<<endl;
               out<<"\t.string "<<"\""<<node->str_val<<"\""<<endl;
         }
         dfs_gen_cons(out,node->child);
@@ -597,6 +628,8 @@ void TreeNode::recursive_gen_code(ostream &out,TreeNode *node){
 }
 
 void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
+    if(node==nullptr)
+        return;
     if(node->nodeType==NODE_STMT){
         switch (node->stmtType)
         {
@@ -610,18 +643,68 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
             break;
         }
         case STMT_IF:
-        {
-
+        { 
             break;
         }
         case STMT_PRINTF:
-        {
-
+        {   TreeNode *io_stmt = node->child->child;
+            int numchild=0;
+            while(io_stmt!=nullptr){
+                numchild++;
+                io_stmt=io_stmt->sibling;
+            }
+            for(int i=numchild;i>0;i--){
+                int t=i;
+                TreeNode *temp_node=node->child->child;
+                while(--t){
+                    temp_node=temp_node->sibling;
+                }
+                if(temp_node->nodeType==NODE_VAR&&temp_node->varType==VAR_INTEGER){
+                    out<<"\tmovl "<<"_"<<temp_node->belong_table->table_name<<"_"<<temp_node->var_name;
+                    out<<",%edx"<<endl;
+                    out<<"\tpushl %edx"<<endl;
+                }else if(temp_node->nodeType==NODE_VAR&&temp_node->varType==VAR_CHAR){
+                    out<<"\tmovzbl "<<"_"<<temp_node->belong_table->table_name<<"_"<<temp_node->var_name;
+                    out<<",%edx"<<endl;
+                    out<<"\tmovsbl %dl,%edx"<<endl;
+                    out<<"\tpushl %edx"<<endl;
+                }else {
+                    out<<"\tpushl $LC"<<temp_node->temp_cons<<endl;
+                }
+            }
+            out<<"\tcall printf"<<endl;
+            out<<"\taddl $"<<numchild*4<<", %esp"<<endl;
+            recursive_gen_code(out,node->sibling);
             break;
         }
         case STMT_SCANF:
-        {
-
+        {   TreeNode *io_stmt = node->child->child;
+            int numchild=0;
+            while(io_stmt!=nullptr){
+                numchild++;
+                io_stmt=io_stmt->sibling;
+            }
+            for(int i=numchild;i>0;i--){
+                int t=i;
+                TreeNode *temp_node=node->child->child;
+                while(--t){
+                    temp_node=temp_node->sibling;
+                }
+                if(temp_node->nodeType==NODE_VAR&&temp_node->varType==VAR_INTEGER){
+                    out<<"\tleal "<<"_"<<temp_node->belong_table->table_name<<"_"<<temp_node->var_name;
+                    out<<",%edx"<<endl;
+                    out<<"\tpushl %edx"<<endl;
+                }else if(temp_node->nodeType==NODE_VAR&&temp_node->varType==VAR_CHAR){
+                    out<<"\tleal "<<"_"<<temp_node->belong_table->table_name<<"_"<<temp_node->var_name;
+                    out<<",%edx"<<endl;
+                    out<<"\tpushl %edx"<<endl;
+                }else {
+                    out<<"\tpushl $LC"<<temp_node->temp_cons<<endl;
+                }
+            }
+            out<<"\tcall scanf"<<endl;
+            out<<"\taddl $"<<numchild*4<<", %esp"<<endl;
+            recursive_gen_code(out,node->sibling);
             break;
         }
         case STMT_FOR:
@@ -635,6 +718,8 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
                 if(node->child->sibling->nodeType==NODE_VAR&&node->child->sibling->varType==VAR_INTEGER){
                     out<<"\tmovl "<<"_" <<node->child->sibling->belong_table->table_name<<"_"<<node->child->sibling->var_name;
                     out<<", %edx"<<endl;
+                    if(node->child->sibling->isNeg)
+                        out<<"\tnegl %edx"<<endl;
                     out<<"\tmovl "<<"%edx";
                     out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
                 }else if(node->child->sibling->nodeType==NODE_VAR&&node->child->sibling->varType==VAR_CHAR){
@@ -646,26 +731,70 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
                     out<<"\tmovl "<<"$"<<node->child->sibling->int_val;
                     out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
                 }else{
-                    out<<"\tmovb "<<"$"<<node->child->sibling->char_val;
+                    out<<"\tmovb "<<"$"<<(int)node->child->sibling->char_val;
                     out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
                 }
             }else if(node->child->sibling->nodeType==NODE_OP){
                 expr_gen_code(out,node->child->sibling);             //丢给expr递归处理
                 out<<"\tmovl "<<"t"<<node->child->sibling->temp_var;
                 out<<" ,%edx"<<endl;
+                if(node->child->sibling->isNeg)
+                        out<<"\tnegl %edx"<<endl;
                 out<<"\tmovl "<<"%edx";
                 out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
             }else if(node->child->sibling->nodeType==NODE_STMT){
-                    //对于a=b=c 连等情况 则递归，从右向左处理。
+                //对于a=b=c 连等情况 则递归，从右向左处理。
                 stmt_gen_code(out,node->child->sibling);
-                //可能会出现多重嵌套，需要考虑。。。
+                //可能会出现多重嵌套，已更改
+                if(node->child->belong_table->findtype(node->child->belong_table,node->child->var_name)==VAR_INTEGER){
+                    out<<"\tmovl "<<"_"<<node->child->sibling->child->belong_table->table_name<<"_"<<node->child->sibling->child->var_name;
+                    out<<", %edx"<<endl;
+                    out<<"\tmovl "<<"%edx";
+                    out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
+                }else{
+                    //对于类型的转换 记得改。。
+                    out<<"\tmovzbl "<<"_"<<node->child->sibling->child->belong_table->table_name<<"_"<<node->child->sibling->child->var_name;
+                    out<<", %edx"<<endl;
+                    out<<"\tmovb "<<"%dl";
+                    out<<", "<<"_"<<node->child->belong_table->table_name<<"_"<<node->child->var_name<<endl;
+                }
             }
             recursive_gen_code(out,node->sibling);
             break;
         }
         case STMT_DECL:
         {
-            //待补充
+            if(node->child->sibling->nodeType==NODE_VAR){           //对于单个变量的定义
+                if(node->child->sibling->sibling->nodeType==NODE_VAR||node->child->sibling->sibling->nodeType==NODE_CONST){
+                    if(node->child->sibling->sibling->nodeType==NODE_VAR&&node->child->sibling->sibling->varType==VAR_INTEGER){
+                        out<<"\tmovl "<<"_" <<node->child->sibling->sibling->belong_table->table_name<<"_"<<node->child->sibling->sibling->var_name;
+                        out<<", %edx"<<endl;
+                        if(node->child->sibling->sibling->isNeg)
+                            out<<"\tnegl %edx"<<endl;
+                        out<<"\tmovl "<<"%edx";
+                        out<<", "<<"_"<<node->child->sibling->belong_table->table_name<<"_"<<node->child->sibling->var_name<<endl;
+                    }else if(node->child->sibling->sibling->nodeType==NODE_VAR&&node->child->sibling->sibling->varType==VAR_CHAR){
+                        out<<"\tmovzbl "<<"_" <<node->child->sibling->sibling->belong_table->table_name<<"_"<<node->child->sibling->sibling->var_name;
+                        out<<", %edx"<<endl;
+                        out<<"\tmovb "<<"%dl";
+                        out<<", "<<"_"<<node->child->sibling->belong_table->table_name<<"_"<<node->child->sibling->var_name<<endl;
+                    }else if(node->child->sibling->sibling->nodeType==NODE_CONST&&node->child->sibling->sibling->consType==CONS_INTEGER){
+                        out<<"\tmovl "<<"$"<<node->child->sibling->sibling->int_val;
+                        out<<", "<<"_"<<node->child->sibling->belong_table->table_name<<"_"<<node->child->sibling->var_name<<endl;
+                    }else{
+                        out<<"\tmovb "<<"$"<<(int)node->child->sibling->sibling->char_val;
+                        out<<", "<<"_"<<node->child->sibling->belong_table->table_name<<"_"<<node->child->sibling->var_name<<endl;
+                    }
+                }else{ 
+                    expr_gen_code(out,node->child->sibling->sibling);
+                    out<<"\tmovl "<<"t"<<node->child->sibling->sibling->temp_var;
+                    out<<" ,%edx"<<endl;
+                    if(node->child->sibling->sibling->isNeg)
+                            out<<"\tnegl %edx"<<endl;
+                    out<<"\tmovl "<<"%edx";
+                    out<<", "<<"_"<<node->child->sibling->belong_table->table_name<<"_"<<node->child->sibling->var_name<<endl;
+                }
+            }
             recursive_gen_code(out,node->sibling);
             break;
         }
@@ -673,6 +802,7 @@ void TreeNode::stmt_gen_code(ostream &out,TreeNode *node){
             break;
         }
     }else if(node->nodeType==NODE_PROG){
+        out<<node->label.begin_label<<":"<<endl;
         recursive_gen_code(out,node->child);
     }else if(node->nodeType==NODE_FUNC){
         recursive_gen_code(out,node->child->sibling);
@@ -692,95 +822,177 @@ void TreeNode::expr_gen_code(ostream &out,TreeNode *node){
     {
     case OP_ADD:
     {
-        out << "\tmovl $";
+        out << "\tmovl ";
 		if (e1->nodeType == NODE_VAR)
 			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
 		else if (e1->nodeType == NODE_CONST)
 			out<<e1->int_val;
 		else out << "t" << e1->temp_var;
 		out << ", %eax" <<endl;
-		out << "\taddl $";
-		if (e2->nodeType == NODE_VAR)
-			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;               
+        if(e1->isNeg)
+            out<<"\tnegl %eax"<<endl;
+        if(e2->isNeg){
+            out<<"\tmovl ";
+            if (e2->nodeType == NODE_VAR)
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
 		else if (e2->nodeType == NODE_CONST)
-			out <<e2->int_val;    
+			out <<"$"<<e2->int_val;    
 		else out << "t" << e2->temp_var;
+        out<<", %ecx"<<endl;
+        out<<"\tnegl %ecx"<<endl;
+        out<<"\taddl %ecx";
+        }else{
+		if (e2->nodeType == NODE_VAR){
+            out << "\taddl ";
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;
+        }               
+		else if (e2->nodeType == NODE_CONST){
+            out << "\taddl $";
+			out <<e2->int_val;
+        }
+		else {
+            out << "\taddl ";
+            out << "t" << e2->temp_var;
+        }
+        }
 		out << ", %eax" << endl;
-		out << "\tmovl %eax, $t" << node->temp_var << endl;
+		out << "\tmovl %eax, t" << node->temp_var << endl;
         break;
     }
     case OP_SUB:
     {
-        out << "\tmovl $";
+        out << "\tmovl ";
 		if (e1->nodeType == NODE_VAR)
 			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
 		else if (e1->nodeType == NODE_CONST)
-			out<<e1->int_val;
+			out<<"$"<<e1->int_val;
 		else out << "t" << e1->temp_var;
 		out << ", %eax" <<endl;
-		out << "\tsubl $";
+        if(e1->isNeg)
+            out<<"\tnegl %eax"<<endl;
+        if(e2->isNeg){
+            out<<"\tmovl ";
+        if (e2->nodeType == NODE_VAR)
+			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+		else if (e2->nodeType == NODE_CONST)
+			out <<"$"<<e2->int_val;    
+		else out << "t" << e2->temp_var;
+         out<<", %ecx"<<endl;
+         out<<"\tnegl %ecx"<<endl;
+         out<<"\tsubl %ecx";
+        }else{
+		out << "\tsubl ";
 		if (e2->nodeType == NODE_VAR)
 			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
 		else if (e2->nodeType == NODE_CONST)
-			out <<e2->int_val;    
+			out <<"$"<<e2->int_val;    
 		else out << "t" << e2->temp_var;
+        }
 		out << ", %eax" << endl;
-		out << "\tmovl %eax, $t" << node->temp_var << endl;
+		out << "\tmovl %eax, t" << node->temp_var << endl;
         break;
     }
     case OP_MUL:
     {
-        out << "\tmovl $";
+        out << "\tmovl ";
 		if (e1->nodeType == NODE_VAR)
 			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
 		else if (e1->nodeType == NODE_CONST)
-			out<<e1->int_val;
+			out<<"$"<<e1->int_val;
 		else out << "t" << e1->temp_var;
 		out << ", %eax" <<endl;
-		out << "\timull $";
-		if (e2->nodeType == NODE_VAR)
-			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
-		else if (e2->nodeType == NODE_CONST)
-			out <<e2->int_val;    
-		else out << "t" << e2->temp_var;
+        if(e1->isNeg)
+            out<<"\tnegl %eax"<<endl;
+        if(e2->isNeg){
+            out<<"\tmovl ";
+            if (e2->nodeType == NODE_VAR)
+                out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+            else if (e2->nodeType == NODE_CONST)
+                out <<"$"<<e2->int_val;    
+            else out << "t" << e2->temp_var;
+            out<<", %ecx"<<endl;
+            out<<"\tnegl %ecx"<<endl;
+            out<<"\timull %ecx";
+        }else{
+            out << "\timull ";
+            if (e2->nodeType == NODE_VAR)
+                out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+            else if (e2->nodeType == NODE_CONST)
+                out <<"$"<<e2->int_val;    
+            else out << "t" << e2->temp_var;
+        }
 		out << ", %eax" << endl;
-		out << "\tmovl %eax, $t" << node->temp_var << endl;
+		out << "\tmovl %eax, t" << node->temp_var << endl;
         break;
     }
     case OP_DIV:
     {
-        out << "\tmovl $";
+        out << "\tmovl ";
 		if (e1->nodeType == NODE_VAR)
 			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
 		else if (e1->nodeType == NODE_CONST)
-			out<<e1->int_val;
+			out<<"$"<<e1->int_val;
 		else out << "t" << e1->temp_var;
 		out << ", %eax" <<endl;
-		out << "\tidivl $";                   //对于除法只有单目
-		if (e2->nodeType == NODE_VAR)
-			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
-		else if (e2->nodeType == NODE_CONST)
-			out <<e2->int_val;    
-		else out << "t" << e2->temp_var;
-		out << "\tmovl %eax, $t" << node->temp_var << endl;
+        if(e1->isNeg)
+            out<<"\tnegl %eax"<<endl;
+        if(e2->isNeg){
+            out<<"\tmovl ";
+            if (e2->nodeType == NODE_VAR)
+                out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+            else if (e2->nodeType == NODE_CONST)
+                out <<"$"<<e2->int_val;    
+            else out << "t" << e2->temp_var;
+            out<<", %ecx"<<endl;
+            out<<"\tnegl %ecx"<<endl;
+            out<<"\tcltd"<<endl;
+            out << "\tidivl %ecx"<<endl; 
+        }else{
+            out<<"\tcltd"<<endl;
+            out << "\tidivl ";                   //对于除法只有单目
+            if (e2->nodeType == NODE_VAR)
+                out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+            else if (e2->nodeType == NODE_CONST)
+                out <<"$"<<e2->int_val;    
+            else out << "t" << e2->temp_var;
+            out<<endl;
+            }
+            out << "\tmovl %eax, t" << node->temp_var << endl;
         break;
     }
     case OP_MOD:
     {
-        out << "\tmovl $";
+        out << "\tmovl ";
 		if (e1->nodeType == NODE_VAR)
 			out << "_" <<e1->belong_table->table_name<<"_"<<e1->var_name;             
 		else if (e1->nodeType == NODE_CONST)
-			out<<e1->int_val;
-		else out << "t" << e1->temp_var;
+			out<<"$"<<e1->int_val;
+		else out<< "t" << e1->temp_var;
 		out << ", %eax" <<endl;
-		out << "\tidivl $";                   //对于取模取的是除法的余数
-		if (e2->nodeType == NODE_VAR)
-			out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
-		else if (e2->nodeType == NODE_CONST)
-			out <<e2->int_val;    
-		else out << "t" << e2->temp_var;
-		out << "\tmovl %edx, $t" << node->temp_var << endl;
+        if(e1->isNeg)
+            out<<"\tnegl %eax"<<endl;
+        if(e2->isNeg){
+            out<<"\tmovl ";
+            if (e2->nodeType == NODE_VAR)
+                out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+            else if (e2->nodeType == NODE_CONST)
+                out <<"$"<<e2->int_val;    
+            else out << "t" << e2->temp_var;
+            out<<", %ecx"<<endl;
+            out<<"\tnegl %ecx"<<endl;
+            out<<"\tcltd"<<endl;
+            out << "\tidivl %ecx"<<endl; 
+        }else{
+            out<<"\tcltd"<<endl;
+            out << "\tidivl ";                   //对于取模取的是除法的余数
+            if (e2->nodeType == NODE_VAR)
+                out << "_"<<e2->belong_table->table_name<<"_"<<e2->var_name;              
+            else if (e2->nodeType == NODE_CONST)
+                out <<"$"<<e2->int_val;    
+            else out << "t" << e2->temp_var;
+            out<<endl;
+        }
+		out << "\tmovl %edx, t" << node->temp_var << endl;
         break;
     }
     case OP_EQUAL:
@@ -819,7 +1031,7 @@ void TreeNode::expr_gen_code(ostream &out,TreeNode *node){
 }
 
 void TreeNode::get_label(TreeNode *node){
-    node->label.begin_label="_start";
+    node->label.begin_label="main";
     recursive_get_label(node);
 }
 
@@ -832,11 +1044,11 @@ void TreeNode::gen_code(ostream &out,TreeNode *node){
 
     out<<endl<<endl<<"# your asm code here" << endl;
     out << "\t.text" << endl;
-    out << "\t.globl _start" << endl;
+    out << "\t.globl main" << endl;
     recursive_gen_code(out, node);                        //打印
-    //out<<"到达这里了"<<endl;
-    out<<node->label.next_label<<":"<<endl;
+    if(node->label.next_label!="")
+        out<<node->label.next_label<<":"<<endl;
     out<<"\tret"<<endl;
 
-    out<<"	.section	.note.GNU-stack,"",@progbits"<<endl;
+    out<<"	.section	.note.GNU-stack,\"\",@progbits"<<endl;
 }

@@ -68,17 +68,26 @@ func_decl
 if_else
     : IF bool_statment statement %prec LOWER_THEN_ELSE {
         TreeNode *node=new TreeNode(NODE_STMT);
+        TreeNode *if_true=new TreeNode(NODE_STMT);
+        if_true->stmtType=STMT_IFELSE;
+        if_true->addChild($3);
         node->stmtType=STMT_IF;
         node->addChild($2);
-        node->addChild($3);
+        node->addChild(if_true);
         $$=node;
     }
     | IF bool_statment statement ELSE statement {
         TreeNode *node=new TreeNode(NODE_STMT);
+        TreeNode *if_true=new TreeNode(NODE_STMT);
+        if_true->stmtType=STMT_IFELSE;
+        TreeNode *if_false=new TreeNode(NODE_STMT);
+        if_false->stmtType=STMT_IFELSE;
         node->stmtType=STMT_IF;
         node->addChild($2);
-        node->addChild($3);
-        node->addChild($5);
+        if_true->addChild($3);
+        if_false->addChild($5);
+        node->addChild(if_true);
+        node->addChild(if_false);
         $$=node;
     }
     ;
@@ -103,6 +112,8 @@ for_statment
     : LPAREN instruction bool_expr SEMICOLON expr RPAREN {
         TreeNode *node=new TreeNode(NODE_STMT);
         node->stmtType=STMT_FOR_ST;
+        $2->forType=For1;
+        $5->forType=For3;
         node->addChild($2);
         node->addChild($3);
         node->addChild($5);
@@ -125,6 +136,7 @@ instruction
         node->stmtType=STMT_ASSIGN;
         node->addChild($1);
         node->addChild($3);
+        node->assignType=$2->assignType;
         $$=node;  
     }
     | ID exassign instruction {
@@ -370,7 +382,37 @@ type
     }
     ;
 exassign
-    : ASSIGN | ADDASSIGN | SUBASSIGN | MULASSIGN | DIVASSIGN | MODASSIGN
+    : ASSIGN {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->assignType=AS;
+        $$=node;
+    }
+    | ADDASSIGN {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->assignType=AS_ADD;
+        $$=node;
+    }
+    | SUBASSIGN {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->assignType=AS_SUB;
+        $$=node;
+    }
+    | MULASSIGN {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->assignType=AS_MUL;
+        $$=node;
+    }
+    | DIVASSIGN {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->assignType=AS_DIV;
+        $$=node;
+    }
+    | 
+    MODASSIGN {
+        TreeNode *node=new TreeNode(NODE_OP);
+        node->assignType=AS_MOD;
+        $$=node;
+    }
     ;
 loop
     :

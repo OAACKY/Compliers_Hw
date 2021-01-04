@@ -55,6 +55,8 @@ public:
     VarType varType;
     ConsType consType;
     LoopType loopType;
+    AssignType assignType;
+    ForType forType;
     string str_val;
     string var_name;
 

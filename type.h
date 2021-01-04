@@ -63,7 +63,8 @@ enum StmtType{
     STMT_IDLIST,
     STMT_FOR,
     STMT_FOR_ST,
-    STMT_LOOP
+    STMT_LOOP,
+    STMT_IFELSE
 };
 
 enum OpType{
@@ -85,6 +86,15 @@ enum OpType{
     OP_SS
 };
 
+enum AssignType{
+    AS,
+    AS_ADD,
+    AS_SUB,
+    AS_MUL,
+    AS_DIV,
+    AS_MOD
+};
+
 enum VarType{
     VAR_INTEGER,
     VAR_VOID,
@@ -101,6 +111,12 @@ enum LoopType{
     LOOP_RETURN,
     LOOP_BREAK,
     LOOP_CONTINUE
+};
+
+enum ForType{
+    Fort,
+    For1,
+    For3
 };
 
 #endif
